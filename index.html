@@ -1044,6 +1044,8 @@ async function modalPayGlobal(){
 }
 
 function modalAddPayment(fixId='',fixName='',pts=[]){
+  const drName=USER?.user_metadata?.name||'';
+  const isDoctor=ROLE==='doctor';
   modal('تسجيل دفعة',`
     <div class="form-group"><label>المريض *</label>
       ${fixId?`<input value="${esc(fixName)}" readonly style="background:#f8fafc;color:var(--muted)">`:
@@ -1052,7 +1054,7 @@ function modalAddPayment(fixId='',fixName='',pts=[]){
     <div class="form-group"><label>الخدمة *</label><input id="pay-s" placeholder="تقويم، زراعة..."></div>
     <div class="form-row">
       <div class="form-group"><label>رقم السن</label><input id="pay-tooth" type="number" placeholder="مثال: 16" min="11" max="48"></div>
-      <div class="form-group"><label>الطبيب</label><input id="pay-dr"></div>
+      <div class="form-group"><label>الطبيب</label><input id="pay-dr" value="${esc(drName)}" ${isDoctor?'readonly style="background:#f8fafc;color:var(--teal);font-weight:700"':''}></div>
     </div>
     <div class="form-row">
       <div class="form-group"><label>المبلغ الكلي (د.ع)</label><input id="pay-total" type="number" placeholder="0" oninput="calcRem()"></div>
