@@ -320,12 +320,15 @@ function nr(c=4,m='لا توجد بيانات'){return `<tr><td colspan="${c}" s
 // ── Dashboard ─────────────────────────────────────────
 async function renderDash(){
   const mo=todayStr().slice(0,7)+'-01';
-  const[{count:pCount},{data:pays},{data:exps},{data:appts},{data:debts}]=await Promise.all([
+  const yesterday=new Date();yesterday.setDate(yesterday.getDate()-1);
+  const yesterdayStr=yesterday.toISOString().slice(0,10);
+  const[{count:pCount},{data:pays},{data:exps},{data:appts},{data:debts},{data:yesterdayAppts}]=await Promise.all([
     sb.from('patients').select('*',{count:'exact',head:true}),
     sb.from('payments').select('*').gte('date',mo),
     sb.from('expenses').select('*').gte('date',mo),
     sb.from('appointments').select('*').eq('date',todayStr()),
     sb.from('payments').select('patient_id,patient_name,remaining').gt('remaining',0),
+    sb.from('appointments').select('*').eq('date',yesterdayStr).order('time'),
   ]);
   const income=(pays||[]).reduce((s,p)=>s+(p.paid_amount||0),0);
   const expTotal=(exps||[]).reduce((s,e)=>s+(e.amount||0),0);
@@ -364,7 +367,22 @@ async function renderDash(){
           <td><span class="badge ${a.status==='مؤكد'?'bg':'by'}">${a.status}</span></td>
         </tr>`).join('')||nr(4,'لا مواعيد')}</tbody></table>
       </div>
-    </div>`;
+    </div>
+    ${(yesterdayAppts||[]).length>0?`
+    <div class="tbl-wrap" style="margin-top:14px">
+      <div class="tbl-hdr" style="background:#f8fafc">
+        <h3>📋 مراجعو الأمس — ${yesterdayStr}</h3>
+        <span style="font-size:11px;color:var(--muted)">${(yesterdayAppts||[]).length} مريض</span>
+      </div>
+      <table><thead><tr><th>المريض</th><th>الوقت</th><th>الخدمة</th><th>الطبيب</th><th>الحالة</th></tr></thead>
+      <tbody>${(yesterdayAppts||[]).map(a=>`<tr onclick="openPatient('${a.patient_id}')">
+        <td style="font-weight:700">${esc(a.patient_name||'—')}</td>
+        <td dir="ltr">${a.time||'—'}</td>
+        <td><span class="badge bgr">${esc(a.service||'—')}</span></td>
+        <td style="color:var(--muted);font-size:11px">${esc(a.doctor_name||'—')}</td>
+        <td><span class="badge ${a.status==='مكتمل'?'bg':a.status==='ملغي'?'br':'by'}">${a.status}</span></td>
+      </tr>`).join('')}</tbody></table>
+    </div>`:''}`;
 }
 
 // ── Patients ──────────────────────────────────────────
