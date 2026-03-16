@@ -1,0 +1,1396 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>عيادات ڤيرونا | نظام الإدارة</title>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--navy:#0c1829;--navy2:#162236;--teal:#0d9488;--teal2:#14b8a6;--bg:#f1f5f9;--white:#fff;--text:#0f172a;--muted:#64748b;--border:#e2e8f0;--success:#16a34a;--danger:#dc2626;--warning:#d97706}
+body{font-family:'Cairo',sans-serif;direction:rtl;background:var(--bg);color:var(--text)}
+.app{display:flex;min-height:100vh}
+.sidebar{width:220px;background:var(--navy);min-height:100vh;display:flex;flex-direction:column;position:sticky;top:0;height:100vh;flex-shrink:0;overflow-y:auto}
+.main{flex:1;overflow-x:hidden}
+.sb-logo{padding:18px 16px 14px;border-bottom:1px solid rgba(255,255,255,.07)}
+.sb-logo h1{color:#fff;font-size:13.5px;font-weight:800}
+.sb-logo p{color:var(--teal2);font-size:10.5px;margin-top:2px;font-weight:500}
+.sb-nav{flex:1;padding:10px 8px;display:flex;flex-direction:column;gap:2px}
+.nav-btn{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:8px;border:none;background:none;color:rgba(255,255,255,.45);font-size:12px;font-weight:600;cursor:pointer;width:100%;text-align:right;font-family:'Cairo',sans-serif;transition:all .15s}
+.nav-btn:hover{background:rgba(255,255,255,.07);color:rgba(255,255,255,.85)}
+.nav-btn.active{background:var(--teal);color:#fff}
+.nav-btn .nav-label{flex:1}
+.sb-footer{padding:12px 14px;border-top:1px solid rgba(255,255,255,.07)}
+.sb-user{color:rgba(255,255,255,.5);font-size:10.5px;margin-bottom:7px;line-height:1.6}
+.sb-user strong{display:block;color:rgba(255,255,255,.85);font-size:12px;font-weight:700}
+.page-hdr{background:#fff;padding:14px 22px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:10}
+.page-hdr h2{font-size:16px;font-weight:800}
+.page-hdr p{font-size:11px;color:var(--muted);margin-top:2px}
+.page-body{padding:18px 22px}
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px;margin-bottom:20px}
+.card{background:#fff;border-radius:11px;padding:14px 16px;border:1px solid var(--border);border-right:3px solid var(--teal)}
+.card .lbl{font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
+.card .val{font-size:20px;font-weight:900;color:var(--text);margin:4px 0 2px;line-height:1.2}
+.card .sub{font-size:10px;color:var(--muted)}
+.tbl-wrap{background:#fff;border-radius:11px;border:1px solid var(--border);overflow:hidden;margin-bottom:16px}
+.tbl-hdr{padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px}
+.tbl-hdr h3{font-size:13px;font-weight:700}
+table{width:100%;border-collapse:collapse}
+th{background:#f8fafc;padding:8px 12px;text-align:right;font-size:10px;font-weight:700;color:var(--muted);border-bottom:1px solid var(--border)}
+td{padding:9px 12px;font-size:12px;border-bottom:1px solid #f1f5f9;vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:#f8fafc}
+.btn{display:inline-flex;align-items:center;gap:5px;padding:7px 13px;border-radius:8px;font-size:11.5px;font-weight:700;cursor:pointer;border:none;font-family:'Cairo',sans-serif;transition:all .15s;white-space:nowrap}
+.btn-primary{background:var(--teal);color:#fff}.btn-primary:hover{background:var(--teal2)}
+.btn-outline{background:#fff;color:var(--text);border:1.5px solid var(--border)}.btn-outline:hover{background:var(--bg)}
+.btn-danger{background:var(--danger);color:#fff}
+.btn-success{background:var(--success);color:#fff}
+.btn-sm{padding:4px 9px;font-size:10.5px}
+.btn-ghost{background:none;color:var(--muted);border:none;cursor:pointer;font-family:'Cairo',sans-serif;font-size:12px}.btn-ghost:hover{color:var(--text)}
+.badge{display:inline-flex;padding:2px 7px;border-radius:20px;font-size:10px;font-weight:700;white-space:nowrap}
+.bg{background:#dcfce7;color:#15803d}.br{background:#fee2e2;color:#b91c1c}
+.by{background:#fef9c3;color:#a16207}.bb{background:#dbeafe;color:#1d4ed8}
+.bgr{background:#f1f5f9;color:#475569}.bt{background:#ccfbf1;color:#0f766e}.bo{background:#ffedd5;color:#c2410c}
+.form-group{margin-bottom:12px}
+.form-group label{display:block;font-size:11.5px;font-weight:700;color:var(--text);margin-bottom:4px}
+.form-group input,.form-group select,.form-group textarea{width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12.5px;font-family:'Cairo',sans-serif;color:var(--text);outline:none;transition:border .15s;background:#fff}
+.form-group input:focus,.form-group select:focus,.form-group textarea:focus{border-color:var(--teal)}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:11px}
+.form-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:8px;padding-top:11px;border-top:1px solid var(--border)}
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:200;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(3px)}
+.modal{background:#fff;border-radius:16px;padding:22px;width:540px;max-width:96vw;max-height:92vh;overflow-y:auto;box-shadow:0 25px 50px rgba(0,0,0,.25)}
+.modal-ttl{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+.modal-ttl h3{font-size:15px;font-weight:800}
+.alert{padding:9px 13px;border-radius:8px;margin-bottom:12px;font-size:12px;display:flex;align-items:flex-start;gap:8px;font-weight:500}
+.a-warn{background:#fffbeb;border:1px solid #fcd34d;color:#78350f}
+.a-ok{background:#f0fdf4;border:1px solid #86efac;color:#14532d}
+.a-err{background:#fef2f2;border:1px solid #fca5a5;color:#7f1d1d}
+.a-info{background:#eff6ff;border:1px solid #93c5fd;color:#1e3a8a}
+.auth-pg{min-height:100vh;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,var(--navy) 0%,#0f2d4a 100%)}
+.auth-box{background:#fff;border-radius:20px;padding:32px;width:390px;max-width:95vw}
+.auth-logo{text-align:center;margin-bottom:24px}
+.auth-logo h1{font-size:19px;font-weight:900;color:var(--navy)}
+.auth-logo p{font-size:12px;color:var(--muted);margin-top:3px}
+.auth-divider{text-align:center;margin:14px 0;font-size:11px;color:var(--muted)}
+.loading{display:flex;align-items:center;justify-content:center;padding:60px;color:var(--muted);font-size:13px;gap:10px}
+.spin{width:18px;height:18px;border:2.5px solid var(--border);border-top-color:var(--teal);border-radius:50%;animation:sp .65s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+.rt-dot{width:6px;height:6px;border-radius:50%;background:var(--success);animation:rtpulse 2s infinite;display:inline-block}
+@keyframes rtpulse{0%,100%{opacity:1}50%{opacity:.3}}
+.rt-label{font-size:10.5px;color:var(--success);font-weight:700;display:inline-flex;align-items:center;gap:4px}
+.detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}
+.info-section{background:#fff;border-radius:11px;border:1px solid var(--border);padding:16px}
+.info-section h4{font-size:10px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;margin-bottom:11px}
+.info-row{display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid #f1f5f9;font-size:12px}
+.info-row:last-child{border-bottom:none}
+.info-row .k{color:var(--muted)}.info-row .v{font-weight:700;text-align:left;direction:ltr}
+.file-drop{border:2px dashed var(--border);border-radius:9px;padding:16px;text-align:center;cursor:pointer;color:var(--muted);font-size:12px;transition:all .15s}
+.file-drop:hover{border-color:var(--teal);color:var(--teal);background:#f0fdfa}
+.file-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(85px,1fr));gap:7px;margin-top:10px}
+.file-item{border:1px solid var(--border);border-radius:8px;overflow:hidden;cursor:pointer;position:relative}
+.file-item img{width:100%;height:68px;object-fit:cover;display:block}
+.file-item .fn{padding:3px 6px;font-size:9px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.file-cat-badge{position:absolute;top:3px;right:3px;padding:1px 5px;border-radius:3px;font-size:8px;font-weight:800;background:rgba(0,0,0,.6);color:#fff}
+.report-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.rc{background:#fff;border-radius:13px;border:1px solid var(--border);padding:20px}
+.rc h3{font-size:11px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:14px}
+.big-n{font-size:30px;font-weight:900;color:var(--teal);line-height:1}
+.big-l{font-size:10.5px;color:var(--muted);margin-top:4px}
+.formula{background:#f8fafc;border-radius:7px;padding:8px 11px;font-size:10.5px;color:var(--muted);margin-top:11px;font-family:monospace;direction:ltr;line-height:1.6}
+.metric-row{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid #f1f5f9;font-size:12px}
+.metric-row:last-child{border-bottom:none}
+.tabs{display:flex;gap:3px;margin-bottom:14px;background:#fff;border:1px solid var(--border);border-radius:9px;padding:3px;width:fit-content}
+.tab{padding:6px 14px;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer;border:none;background:none;font-family:'Cairo',sans-serif;color:var(--muted);transition:all .15s}
+.tab.active{background:var(--teal);color:#fff}
+.tooth-chart{background:#fff;border-radius:11px;border:1px solid var(--border);padding:16px;margin-bottom:16px}
+.tooth-chart h4{font-size:10px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:12px}
+.teeth-grid{display:flex;flex-direction:column;gap:5px;align-items:center}
+.teeth-row{display:flex;gap:2px;justify-content:center;align-items:center}
+.teeth-divider{width:1px;height:26px;background:var(--border);margin:0 6px}
+.tooth-btn{width:30px;height:34px;border-radius:6px;border:2px solid var(--border);background:#f8fafc;font-size:8.5px;font-weight:800;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;transition:all .15s;font-family:'Cairo',sans-serif}
+.tooth-btn:hover{border-color:var(--teal);transform:scale(1.08)}
+.tooth-btn.treated{border-color:var(--teal);background:#0d9488;color:#fff}
+.tooth-btn.crown_needed{border-color:#f59e0b;background:#f59e0b;color:#fff}
+.tooth-btn.needs{border-color:var(--warning);background:#f59e0b;color:#fff}
+.tooth-btn.extracted{border-color:var(--danger);background:#dc2626;color:#fff}
+.tooth-btn.implant{border-color:#8b5cf6;background:#8b5cf6;color:#fff}
+.tooth-btn.planned{border-color:#0ea5e9;background:#0ea5e9;color:#fff}
+.chart-legend{display:flex;gap:9px;margin-top:10px;flex-wrap:wrap;justify-content:center}
+.legend-item{display:flex;align-items:center;gap:3px;font-size:10px;color:var(--muted)}
+.legend-dot{width:11px;height:11px;border-radius:3px;border:2px solid}
+.pt-num{display:inline-flex;padding:1px 6px;border-radius:5px;background:var(--navy);color:#fff;font-size:10px;font-weight:800;letter-spacing:.5px}
+.pagination{display:flex;align-items:center;gap:5px;justify-content:center;padding:14px}
+.pg-btn{padding:5px 11px;border-radius:7px;border:1.5px solid var(--border);background:#fff;font-size:11.5px;font-weight:700;cursor:pointer;font-family:'Cairo',sans-serif;transition:all .15s}
+.pg-btn:hover{background:var(--bg)}.pg-btn.active{background:var(--teal);color:#fff;border-color:var(--teal)}.pg-btn:disabled{opacity:.4;cursor:not-allowed}
+.pg-info{font-size:11.5px;color:var(--muted);font-weight:600}
+.search-bar{flex:1;padding:8px 13px;border:1.5px solid var(--border);border-radius:9px;font-family:'Cairo',sans-serif;font-size:12.5px;outline:none;transition:border .15s}
+.search-bar:focus{border-color:var(--teal)}
+.treatment-item{display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:8px;border:1px solid var(--border);margin-bottom:6px;background:#fff}
+.treatment-item.done{background:#f0fdf4;border-color:#86efac}
+.treatment-item.inprogress{background:#eff6ff;border-color:#93c5fd}
+.treatment-item.pending{background:#f8fafc}
+.rx-section{background:#fff;border:1px solid var(--border);border-radius:11px;padding:16px;margin-bottom:16px}
+.debt-row{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid #f1f5f9;font-size:12.5px;cursor:pointer}
+.debt-row:hover{background:#f8fafc}
+.debt-row:last-child{border-bottom:none}
+/* Photo categories */
+.photo-tabs{display:flex;gap:4px;margin-bottom:10px;flex-wrap:wrap}
+.photo-tab{padding:4px 10px;border-radius:6px;font-size:10.5px;font-weight:700;cursor:pointer;border:1.5px solid var(--border);background:#fff;font-family:'Cairo',sans-serif;transition:all .15s}
+.photo-tab.active{background:var(--teal);color:#fff;border-color:var(--teal)}
+/* Mobile */
+@media(max-width:768px){.sidebar{display:none}.form-row{grid-template-columns:1fr}.detail-grid,.report-grid{grid-template-columns:1fr}.cards{grid-template-columns:repeat(2,1fr)}.main{padding-bottom:75px}}
+.mobile-nav{display:none;position:fixed;bottom:0;left:0;right:0;background:var(--navy);border-top:1px solid rgba(255,255,255,.12);z-index:9999;padding:5px 0 12px}
+@media(max-width:768px){.mobile-nav{display:flex}}
+.mobile-nav-btn{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;border:none;background:none;color:rgba(255,255,255,.4);cursor:pointer;font-family:'Cairo',sans-serif;font-size:8.5px;font-weight:600;padding:4px 2px;-webkit-tap-highlight-color:transparent}
+.mobile-nav-btn.active{color:var(--teal2)}
+.mobile-nav-btn svg{width:19px;height:19px}
+@media print{.sidebar,.page-hdr,.btn,.mobile-nav{display:none!important}.main{padding:0}.page-body{padding:8px}}
+</style>
+</head>
+<body>
+<div id="pg-setup" style="display:none">
+  <div class="auth-pg">
+    <div class="auth-box">
+      <div class="auth-logo"><div style="font-size:34px;margin-bottom:7px">🦷</div><h1>إعداد النظام</h1><p>أدخل بيانات Supabase</p></div>
+      <div class="alert a-info"><span>ℹ️</span><span>supabase.com ← Project Settings ← API</span></div>
+      <div class="form-group"><label>Project URL</label><input id="sb-url" placeholder="https://xxx.supabase.co" dir="ltr"></div>
+      <div class="form-group"><label>anon public Key</label><input id="sb-key" placeholder="eyJ..." dir="ltr"></div>
+      <div id="setup-err" class="alert a-err" style="display:none"></div>
+      <button class="btn btn-primary" style="width:100%;justify-content:center;padding:10px" onclick="saveSetup()">حفظ والمتابعة ←</button>
+    </div>
+  </div>
+</div>
+<div id="pg-login" style="display:none">
+  <div class="auth-pg">
+    <div class="auth-box">
+      <div class="auth-logo"><div style="font-size:34px;margin-bottom:7px">🦷</div><h1>عيادات ڤيرونا</h1><p>نظام الإدارة — كركوك</p></div>
+      <div class="form-group"><label>البريد الإلكتروني</label><input id="l-email" type="email" dir="ltr"></div>
+      <div class="form-group"><label>كلمة المرور</label><input id="l-pass" type="password" dir="ltr" onkeydown="if(event.key==='Enter')doLogin()"></div>
+      <div id="login-err" class="alert a-err" style="display:none"></div>
+      <button class="btn btn-primary" style="width:100%;justify-content:center;padding:10px" onclick="doLogin()">دخول</button>
+      <div class="auth-divider">──────────</div>
+      <button class="btn-ghost" style="width:100%;text-align:center" onclick="showSetup()">تغيير إعدادات Supabase</button>
+    </div>
+  </div>
+</div>
+<div id="pg-app" style="display:none">
+  <div class="app">
+    <aside class="sidebar">
+      <div class="sb-logo"><h1>🦷 عيادات ڤيرونا</h1><p>نظام الإدارة المتكامل</p></div>
+      <nav class="sb-nav" id="sidebar-nav"></nav>
+      <div class="sb-footer">
+        <div class="sb-user"><strong id="u-name">—</strong><span id="u-role"></span></div>
+        <button class="btn btn-outline btn-sm" style="width:100%;justify-content:center" onclick="doLogout()">خروج</button>
+      </div>
+    </aside>
+    <main class="main">
+      <div class="page-hdr">
+        <div><h2 id="pg-title">—</h2><p id="pg-sub">—</p></div>
+        <div style="display:flex;align-items:center;gap:12px">
+          <div class="rt-label"><span class="rt-dot"></span>متصل</div>
+        </div>
+      </div>
+      <div class="page-body" id="pg-content"><div class="loading"><div class="spin"></div>تحميل...</div></div>
+    </main>
+  </div>
+</div>
+<div id="modal-root"></div>
+<nav class="mobile-nav" id="mobile-nav"></nav>
+<script>
+'use strict';
+const CFG='verona_cfg_v2';
+let sb=null,USER=null,ROLE='reception',RT=null,CUR='dashboard';
+let PT_PAGE=1,PT_SEARCH='',PT_FILTER='all',RPT_MONTH=todayStr().slice(0,7);
+const PT_PER=50;
+
+const getConf=()=>{try{return JSON.parse(localStorage.getItem(CFG));}catch{return null;}};
+const saveConf=(u,k)=>localStorage.setItem(CFG,JSON.stringify({url:u,key:k}));
+function initSB(){const c=getConf();if(!c?.url||!c?.key)return false;try{sb=window.supabase.createClient(c.url,c.key);return true;}catch{return false;}}
+function todayStr(){return new Date().toISOString().slice(0,10)}
+function tomorrowStr(){const d=new Date();d.setDate(d.getDate()+1);return d.toISOString().slice(0,10)}
+const fmt=n=>(Number(n)||0).toLocaleString('ar-IQ')+' د.ع';
+const fmtD=d=>d?new Date(d).toLocaleDateString('ar-IQ'):'—';
+const v=id=>document.getElementById(id)?.value||'';
+const esc=s=>String(s||'').replace(/['"<>&]/g,c=>({'\'':'&#39;','"':'&quot;','<':'&lt;','>':'&gt;','&':'&amp;'}[c]));
+const icon=(d,s=15)=>`<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="${d}"/></svg>`;
+
+const NAV={
+  admin:[
+    {k:'dashboard',l:'لوحة التحكم',d:'M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z M9 22V12h6v10'},
+    {k:'patients', l:'المرضى',d:'M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2 M9 11a4 4 0 100-8 4 4 0 000 8'},
+    {k:'appts',    l:'المواعيد',d:'M8 2v4M16 2v4M3 10h18M5 4h14a2 2 0 012 2v14a2 2 0 01-2 2H5a2 2 0 01-2-2V6a2 2 0 012-2z'},
+    {k:'payments', l:'المدفوعات',d:'M12 1v22M17 5H9.5a3.5 3.5 0 100 7h5a3.5 3.5 0 110 7H6'},
+    {k:'debts',    l:'الديون',d:'M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z'},
+    {k:'expenses', l:'المصاريف',d:'M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82z'},
+    {k:'doctors',  l:'إحصائيات الأطباء',d:'M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2 M23 21v-2a4 4 0 00-3-3.87 M16 3.13a4 4 0 010 7.75'},
+    {k:'reports',  l:'التقارير',d:'M18 20V10M12 20V4M6 20v-6'},
+  ],
+  doctor:[
+    {k:'patients', l:'المرضى',d:'M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2 M9 11a4 4 0 100-8 4 4 0 000 8'},
+    {k:'appts',    l:'المواعيد',d:'M8 2v4M16 2v4M3 10h18M5 4h14a2 2 0 012 2v14a2 2 0 01-2 2H5a2 2 0 01-2-2V6a2 2 0 012-2z'},
+    {k:'payments', l:'تسجيل دفعة',d:'M12 1v22M17 5H9.5a3.5 3.5 0 100 7h5a3.5 3.5 0 110 7H6'},
+  ],
+  reception:[
+    {k:'patients', l:'المرضى',d:'M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2 M9 11a4 4 0 100-8 4 4 0 000 8'},
+    {k:'appts',    l:'المواعيد',d:'M8 2v4M16 2v4M3 10h18M5 4h14a2 2 0 012 2v14a2 2 0 01-2 2H5a2 2 0 01-2-2V6a2 2 0 012-2z'},
+    {k:'payments', l:'المدفوعات',d:'M12 1v22M17 5H9.5a3.5 3.5 0 100 7h5a3.5 3.5 0 110 7H6'},
+    {k:'debts',    l:'الديون',d:'M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z'},
+  ],
+};
+
+const TITLES={
+  dashboard:['لوحة التحكم','نظرة عامة على أداء المركز'],
+  patients:['المرضى','إدارة ملفات وبيانات المرضى'],
+  appts:['المواعيد','جدول المواعيد — تنبيه الغد تلقائي'],
+  payments:['المدفوعات','سجل المدفوعات الكامل'],
+  debts:['الديون المعلقة','المرضى الذين لديهم أرصدة غير مكتملة'],
+  expenses:['المصاريف','نفقات المركز التشغيلية والتسويقية'],
+  doctors:['إحصائيات الأطباء','أداء كل طبيب — إيرادات ومرضى'],
+  reports:['التقارير','CAC · LTV · مصادر المرضى · شهري'],
+};
+
+async function init(){
+  ['pg-setup','pg-login','pg-app'].forEach(id=>show(id,false));
+  if(!initSB()){showSetup();return;}
+  const{data:{session}}=await sb.auth.getSession();
+  if(!session){showLogin();return;}
+  USER=session.user;ROLE=USER.user_metadata?.role||'reception';
+  showApp();
+}
+function show(id,v=true){const el=document.getElementById(id);if(el)el.style.display=v?'block':'none';}
+function showSetup(){show('pg-setup');show('pg-login',false);show('pg-app',false);}
+function showLogin(){show('pg-setup',false);show('pg-login');show('pg-app',false);}
+function showApp(){show('pg-setup',false);show('pg-login',false);show('pg-app');buildApp();}
+function errMsg(id,msg){const el=document.getElementById(id);if(!el)return;el.textContent=msg;el.style.display='flex';setTimeout(()=>el.style.display='none',4000);}
+
+async function saveSetup(){
+  const url=v('sb-url').trim(),key=v('sb-key').trim();
+  if(!url||!key){errMsg('setup-err','أدخل URL و Key');return;}
+  saveConf(url,key);if(!initSB()){errMsg('setup-err','بيانات غير صحيحة');return;}
+  showLogin();
+}
+async function doLogin(){
+  const email=v('l-email').trim(),pass=v('l-pass');
+  if(!email||!pass){errMsg('login-err','أدخل البريد وكلمة المرور');return;}
+  const{data,error}=await sb.auth.signInWithPassword({email,password:pass});
+  if(error){errMsg('login-err','بيانات خاطئة');return;}
+  USER=data.user;ROLE=USER.user_metadata?.role||'reception';showApp();
+}
+async function doLogout(){await sb.auth.signOut();USER=null;showLogin();}
+
+function buildApp(){
+  document.getElementById('u-name').textContent=USER.user_metadata?.name||USER.email;
+  document.getElementById('u-role').textContent={admin:'(مدير)',doctor:'(طبيب)',reception:'(استقبال)'}[ROLE]||'';
+  const items=NAV[ROLE]||NAV.reception;
+  document.getElementById('sidebar-nav').innerHTML=items.map(p=>
+    `<button class="nav-btn" id="nav-${p.k}" onclick="nav('${p.k}')">${icon(p.d,15)}<span class="nav-label">${p.l}</span></button>`
+  ).join('');
+  const mn=document.getElementById('mobile-nav');
+  mn.innerHTML=items.map(p=>
+    `<button class="mobile-nav-btn" id="mnav-${p.k}" onclick="nav('${p.k}')">${icon(p.d,19)}<span>${p.l.split(' ')[0]}</span></button>`
+  ).join('');
+  nav(items[0].k);setupRT();
+}
+
+function nav(page){
+  CUR=page;
+  document.querySelectorAll('.nav-btn,.mobile-nav-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('nav-'+page)?.classList.add('active');
+  document.getElementById('mnav-'+page)?.classList.add('active');
+  const[t,s]=TITLES[page]||[page,''];
+  document.getElementById('pg-title').textContent=t;
+  document.getElementById('pg-sub').textContent=s;
+  renderPage(page);
+}
+async function renderPage(page){
+  document.getElementById('pg-content').innerHTML='<div class="loading"><div class="spin"></div>تحميل...</div>';
+  const fn={dashboard:renderDash,patients:renderPatients,appts:renderAppts,payments:renderPayments,debts:renderDebts,expenses:renderExpenses,doctors:renderDoctors,reports:renderReports};
+  await(fn[page]||renderDash)();
+}
+function setupRT(){
+  if(RT)sb.removeChannel(RT);
+  RT=sb.channel('vrt')
+    .on('postgres_changes',{event:'*',schema:'public',table:'payments'},()=>{if(['payments','dashboard','debts'].includes(CUR))renderPage(CUR);})
+    .on('postgres_changes',{event:'*',schema:'public',table:'appointments'},()=>{if(['appts','dashboard'].includes(CUR))renderPage(CUR);})
+    .subscribe();
+}
+function nr(c=4,m='لا توجد بيانات'){return `<tr><td colspan="${c}" style="text-align:center;color:var(--muted);padding:26px;font-size:12px">${m}</td></tr>`}
+
+// ── Dashboard ─────────────────────────────────────────
+async function renderDash(){
+  const mo=todayStr().slice(0,7)+'-01';
+  const[{count:pCount},{data:pays},{data:exps},{data:appts},{data:debts}]=await Promise.all([
+    sb.from('patients').select('*',{count:'exact',head:true}),
+    sb.from('payments').select('*').gte('date',mo),
+    sb.from('expenses').select('*').gte('date',mo),
+    sb.from('appointments').select('*').eq('date',todayStr()),
+    sb.from('payments').select('patient_id,patient_name,remaining').gt('remaining',0),
+  ]);
+  const income=(pays||[]).reduce((s,p)=>s+(p.paid_amount||0),0);
+  const expTotal=(exps||[]).reduce((s,e)=>s+(e.amount||0),0);
+  const profit=income-expTotal;
+  const pending=(debts||[]).reduce((s,p)=>s+(p.remaining||0),0);
+  const sc=(emoji,lbl,val,sub,color='')=>{
+    const st=color?`style="color:${color}"`:'' ;
+    const sz=String(val).length>10?'font-size:13px':'';
+    return `<div class="card"><div class="lbl">${emoji} ${lbl}</div><div class="val" ${st} style="${sz}">${val}</div><div class="sub">${sub}</div></div>`;
+  };
+  document.getElementById('pg-content').innerHTML=`
+    <div class="cards">
+      ${sc('👥','المرضى',pCount||0,'إجمالي المسجلين')}
+      ${sc('📅','اليوم',(appts||[]).length,todayStr())}
+      ${sc('💰','إيرادات الشهر',fmt(income),'المدفوعات','var(--success)')}
+      ${sc('📊','مصاريف الشهر',fmt(expTotal),'النفقات','var(--danger)')}
+      ${sc('📈','صافي الشهر',fmt(profit),profit>=0?'✓ ربح':'✗ خسارة',profit>=0?'var(--success)':'var(--danger)')}
+      ${sc('⚠️','ديون معلقة',fmt(pending),'غير مكتمل','var(--warning)')}
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+      <div class="tbl-wrap">
+        <div class="tbl-hdr"><h3>آخر المدفوعات</h3><div class="rt-label"><span class="rt-dot"></span>حي</div></div>
+        <table><thead><tr><th>المريض</th><th>الخدمة</th><th>المدفوع</th><th>الحالة</th></tr></thead>
+        <tbody>${(pays||[]).slice().reverse().slice(0,5).map(p=>`<tr onclick="openPatient('${p.patient_id}')">
+          <td style="font-weight:700">${esc(p.patient_name||'—')}</td><td>${esc(p.service||'—')}</td>
+          <td style="color:var(--success);font-weight:700">${fmt(p.paid_amount)}</td>
+          <td>${p.remaining>0?`<span class="badge by">${fmt(p.remaining)}</span>`:'<span class="badge bg">✓</span>'}</td>
+        </tr>`).join('')||nr(4)}</tbody></table>
+      </div>
+      <div class="tbl-wrap">
+        <div class="tbl-hdr"><h3>مواعيد اليوم</h3></div>
+        <table><thead><tr><th>المريض</th><th>الوقت</th><th>الخدمة</th><th>الحالة</th></tr></thead>
+        <tbody>${(appts||[]).map(a=>`<tr>
+          <td style="font-weight:700">${esc(a.patient_name||'—')}</td><td dir="ltr">${a.time||'—'}</td>
+          <td>${esc(a.service||'—')}</td>
+          <td><span class="badge ${a.status==='مؤكد'?'bg':'by'}">${a.status}</span></td>
+        </tr>`).join('')||nr(4,'لا مواعيد')}</tbody></table>
+      </div>
+    </div>`;
+}
+
+// ── Patients ──────────────────────────────────────────
+async function renderPatients(){
+  let q=sb.from('patients').select('*',{count:'exact'});
+  if(PT_SEARCH)q=q.or(`name.ilike.%${PT_SEARCH}%,phone.ilike.%${PT_SEARCH}%,patient_number.ilike.%${PT_SEARCH}%`);
+  if(PT_FILTER==='refused')q=q.eq('refused_treatment',true);
+  else if(PT_FILTER==='followup')q=q.not('followup_date','is',null);
+  const from=(PT_PAGE-1)*PT_PER,to=from+PT_PER-1;
+  q=q.order('patient_number',{ascending:true}).range(from,to);
+  const{data:pts,count}=await q;
+  const totalPages=Math.ceil((count||0)/PT_PER);
+  document.getElementById('pg-content').innerHTML=`
+    <div style="display:flex;gap:9px;margin-bottom:13px;align-items:center;flex-wrap:wrap">
+      <input class="search-bar" placeholder="🔍 بحث بالاسم أو الهاتف أو الرقم..." value="${esc(PT_SEARCH)}"
+        oninput="PT_SEARCH=this.value;PT_PAGE=1;renderPatients()" style="flex:1;min-width:180px">
+      <div class="tabs" style="margin-bottom:0">
+        <button class="tab ${PT_FILTER==='all'?'active':''}" onclick="PT_FILTER='all';PT_PAGE=1;renderPatients()">الكل</button>
+        <button class="tab ${PT_FILTER==='refused'?'active':''}" onclick="PT_FILTER='refused';PT_PAGE=1;renderPatients()">رفض العلاج</button>
+        <button class="tab ${PT_FILTER==='followup'?'active':''}" onclick="PT_FILTER='followup';PT_PAGE=1;renderPatients()">متابعة</button>
+      </div>
+      ${ROLE!=='doctor'?`<button class="btn btn-primary" onclick="modalAddPatient()">+ مريض جديد</button>`:''}
+    </div>
+    <div class="tbl-wrap">
+      <div class="tbl-hdr"><h3>المرضى — ${count||0}</h3><span class="pg-info">صفحة ${PT_PAGE} / ${totalPages||1}</span></div>
+      <table><thead><tr><th>الرقم</th><th>الاسم</th><th>الهاتف</th><th>المصدر</th><th>المتابعة</th><th>الحالة</th><th></th></tr></thead>
+      <tbody>${(pts||[]).map(p=>`<tr onclick="openPatient('${p.id}')">
+        <td><span class="pt-num">${esc(p.patient_number||'—')}</span></td>
+        <td style="font-weight:800">${esc(p.name)}</td>
+        <td dir="ltr">${ROLE==='doctor'?'<span style="color:var(--border)">••••••••••</span>':esc(p.phone||'—')}</td>
+        <td>${p.source_page?`<span class="badge bt">${esc(p.source_page)}</span>`:p.acquisition_source?`<span class="badge bgr">${esc(p.acquisition_source)}</span>`:'—'}</td>
+        <td>${p.followup_date?`<span style="color:var(--warning);font-weight:700;font-size:11px">📅 ${p.followup_date}</span>`:'—'}</td>
+        <td>${p.refused_treatment?'<span class="badge br">رفض</span>':'<span class="badge bg">نشط</span>'}</td>
+        <td><button class="btn btn-outline btn-sm" onclick="event.stopPropagation();openPatient('${p.id}')">فتح ←</button></td>
+      </tr>`).join('')||nr(7)}</tbody></table>
+      ${totalPages>1?`<div class="pagination">
+        <button class="pg-btn" onclick="PT_PAGE=1;renderPatients()" ${PT_PAGE===1?'disabled':''}>«</button>
+        <button class="pg-btn" onclick="PT_PAGE--;renderPatients()" ${PT_PAGE<=1?'disabled':''}>‹</button>
+        ${Array.from({length:Math.min(5,totalPages)},(_,i)=>{let pg=Math.max(1,Math.min(PT_PAGE-2+i,totalPages));return`<button class="pg-btn ${PT_PAGE===pg?'active':''}" onclick="PT_PAGE=${pg};renderPatients()">${pg}</button>`;}).join('')}
+        <button class="pg-btn" onclick="PT_PAGE++;renderPatients()" ${PT_PAGE>=totalPages?'disabled':''}>›</button>
+        <button class="pg-btn" onclick="PT_PAGE=${totalPages};renderPatients()" ${PT_PAGE>=totalPages?'disabled':''}>»</button>
+        <span class="pg-info">${from+1}–${Math.min(to+1,count||0)} من ${count||0}</span>
+      </div>`:''}
+    </div>`;
+}
+
+// ── Patient Detail ────────────────────────────────────
+async function openPatient(id){
+  const[{data:p},{data:pays},{data:files},{data:appts},{data:teeth},{data:plans}]=await Promise.all([
+    sb.from('patients').select('*').eq('id',id).single(),
+    sb.from('payments').select('*').eq('patient_id',id).order('date',{ascending:false}),
+    sb.from('patient_files').select('*').eq('patient_id',id).order('created_at',{ascending:false}),
+    sb.from('appointments').select('*').eq('patient_id',id).order('date',{ascending:false}),
+    sb.from('tooth_records').select('*').eq('patient_id',id),
+    sb.from('treatment_plans').select('*').eq('patient_id',id).order('created_at',{ascending:false}),
+  ]);
+  if(!p)return;
+  const paid=(pays||[]).reduce((s,x)=>s+(x.paid_amount||0),0);
+  const rem=(pays||[]).reduce((s,x)=>s+(x.remaining||0),0);
+  const toothMap={};(teeth||[]).forEach(t=>toothMap[t.tooth_number]=t);
+  const tCls=n=>{const t=toothMap[n];if(!t)return'';return{extracted:'extracted',implant:'implant',needs:'needs',planned:'planned',treated:'treated',crown_needed:'crown_needed'}[t.status]||'';};
+  const tIco=n=>{const t=toothMap[n];if(!t)return'';return{extracted:'✕',implant:'▪',needs:'!',planned:'○',treated:'✓',crown_needed:'👑'}[t.status]||'';};
+  const tb=n=>`<button class="tooth-btn ${tCls(n)}" onclick="openToothModal('${id}','${n}','${esc(p.name)}')" title="${toothMap[n]?esc(toothMap[n].treatment||''):'سن '+n}"><span style="font-size:8px">${n}</span><span style="font-size:9px">${tIco(n)}</span></button>`;
+
+  // Photo filter
+  let photoCat='all';
+  const photoHtml=(cat)=>{
+    const filtered=cat==='all'?(files||[]):(files||[]).filter(f=>f.category===cat);
+    return `<div class="photo-tabs">
+      ${['all','xray','before','after','other'].map(c=>`<button class="photo-tab ${cat===c?'active':''}" onclick="filterPhotos('${id}','${c}')">${{all:'الكل',xray:'أشعة',before:'قبل',after:'بعد',other:'أخرى'}[c]}</button>`).join('')}
+    </div>
+    <div class="file-drop" onclick="document.getElementById('fi-${id}').click()">📎 رفع صورة أو ملف</div>
+    <input type="file" id="fi-${id}" accept="image/*,.pdf" style="display:none" onchange="uploadFile('${id}',this)">
+    <div class="file-grid" id="fg-${id}">
+      ${filtered.map(f=>`<div class="file-item" onclick="window.open('${esc(f.file_url)}','_blank')">
+        ${f.file_type?.startsWith('image')?`<img src="${esc(f.file_url)}" alt="">`:
+          `<div style="height:68px;display:flex;align-items:center;justify-content:center;font-size:26px;background:#f8fafc">📄</div>`}
+        ${f.category?`<span class="file-cat-badge">${{xray:'أشعة',before:'قبل',after:'بعد',other:'أخرى'}[f.category]||f.category}</span>`:''}
+        <div class="fn">${esc(f.description||f.file_name)}</div>
+      </div>`).join('')}
+    </div>`;
+  };
+
+  document.getElementById('pg-content').innerHTML=`
+    <button class="btn btn-ghost" style="margin-bottom:12px;font-size:12.5px" onclick="renderPatients()">← رجوع</button>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px">
+      <div>
+        <div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap">
+          ${p.patient_number?`<span class="pt-num">${esc(p.patient_number)}</span>`:''}
+          <h2 style="font-size:18px;font-weight:900">${esc(p.name)}</h2>
+          ${p.refused_treatment?'<span class="badge br">رفض العلاج</span>':''}
+          ${p.is_smoker?'<span class="badge by">🚬</span>':''}
+          ${p.has_allergy?'<span class="badge by">⚠ حساسية</span>':''}
+          ${p.has_diabetes||p.has_hypertension||p.has_heart_disease?'<span class="badge br">🏥 مزمن</span>':''}
+        </div>
+        <p style="color:var(--muted);font-size:12px;margin-top:2px">${ROLE==='doctor'?'••••••••••':esc(p.phone||'')} ${p.dob?'· '+p.dob:''}</p>
+      </div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        ${ROLE!=='reception'?`<button class="btn btn-primary btn-sm" onclick="modalAddPayment('${id}','${esc(p.name)}')">+ دفعة</button>`:''}
+        <button class="btn btn-outline btn-sm" onclick="modalAddApptSingle('${id}','${esc(p.name)}')">+ موعد</button>
+        ${ROLE!=='reception'?`<button class="btn btn-outline btn-sm" onclick="modalAddPlan('${id}','${esc(p.name)}')">+ خطة علاج</button>`:''}
+        <button class="btn btn-outline btn-sm" onclick="printRx('${id}','${esc(p.name)}')">🖨 وصفة</button>
+        <button class="btn btn-outline btn-sm" onclick="sendWhatsApp('${esc(p.phone||'')}','${esc(p.name)}')">💬 واتساب</button>
+        ${ROLE==='admin'?`<button class="btn btn-danger btn-sm" onclick="deletePatient('${id}','${esc(p.name)}')">🗑</button>`:''}
+      </div>
+    </div>
+
+    <!-- Medical Alerts -->
+    ${p.is_smoker||p.has_allergy||p.has_diabetes||p.has_hypertension||p.has_heart_disease?`
+    <div class="alert a-warn" style="margin-bottom:14px">
+      <div style="font-weight:700;margin-bottom:4px">⚠️ تنبيهات طبية</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;font-size:11.5px">
+        ${p.is_smoker?'<span>🚬 مدخن</span>':''}
+        ${p.has_allergy?`<span>⚠ حساسية: ${esc(p.allergy_details||'—')}</span>`:''}
+        ${p.has_diabetes?'<span>💉 سكري</span>':''}
+        ${p.has_hypertension?'<span>❤️ ضغط مرتفع</span>':''}
+        ${p.has_heart_disease?'<span>🫀 قلب</span>':''}
+      </div>
+    </div>`:''}
+
+    <!-- Tooth Chart -->
+    <div class="tooth-chart">
+      <h4>🦷 خريطة الأسنان</h4>
+      <div class="teeth-grid">
+        <div style="font-size:9.5px;color:var(--muted);font-weight:700">الفك العلوي</div>
+        <div class="teeth-row">${[18,17,16,15,14,13,12,11].map(tb).join('')}<div class="teeth-divider"></div>${[21,22,23,24,25,26,27,28].map(tb).join('')}</div>
+        <div style="height:5px"></div>
+        <div class="teeth-row">${[48,47,46,45,44,43,42,41].map(tb).join('')}<div class="teeth-divider"></div>${[31,32,33,34,35,36,37,38].map(tb).join('')}</div>
+        <div style="font-size:9.5px;color:var(--muted);font-weight:700">الفك السفلي</div>
+      </div>
+      <div class="chart-legend">
+        <div class="legend-item"><div class="legend-dot" style="border-color:var(--teal);background:#0d9488"></div>تم</div>
+        <div class="legend-item"><div class="legend-dot" style="border-color:#f59e0b;background:#f59e0b"></div>يحتاج تغليف</div>
+        <div class="legend-item"><div class="legend-dot" style="border-color:#0ea5e9;background:#0ea5e9"></div>مخطط</div>
+        <div class="legend-item"><div class="legend-dot" style="border-color:var(--warning);background:#f59e0b"></div>يحتاج علاج</div>
+        <div class="legend-item"><div class="legend-dot" style="border-color:var(--danger);background:#dc2626"></div>مخلوع</div>
+        <div class="legend-item"><div class="legend-dot" style="border-color:#8b5cf6;background:#8b5cf6"></div>زراعة</div>
+      </div>
+      ${(teeth||[]).length>0?`<div style="margin-top:12px;overflow-x:auto">
+        <table style="width:100%;border-collapse:collapse;min-width:380px">
+          <thead><tr style="background:#f8fafc">${['السن','العلاج','الحالة','التكلفة','الطبيب'].map(h=>`<th style="text-align:right;padding:7px 10px;font-size:10px;color:var(--muted);border-bottom:1px solid var(--border)">${h}</th>`).join('')}</tr></thead>
+          <tbody>${(teeth||[]).sort((a,b)=>a.tooth_number-b.tooth_number).map(t=>`<tr style="border-bottom:1px solid #f1f5f9">
+            <td style="padding:7px 10px;font-weight:800">#${t.tooth_number}</td>
+            <td style="padding:7px 10px">${esc(t.treatment||'—')}</td>
+            <td style="padding:7px 10px"><span class="badge ${{treated:'bg',needs:'by',extracted:'br',implant:'bt',planned:'bb',crown_needed:'bo'}[t.status]||'bgr'}">${{treated:'تم',needs:'يحتاج',extracted:'مخلوع',implant:'زراعة',planned:'مخطط',crown_needed:'يحتاج تغليف'}[t.status]||t.status}</span></td>
+            <td style="padding:7px 10px;color:var(--teal);font-weight:700">${t.cost?fmt(t.cost):'—'}</td>
+            <td style="padding:7px 10px;font-size:11px;color:var(--muted)">${esc(t.doctor_name||'—')}</td>
+          </tr>`).join('')}</tbody>
+        </table></div>`:''}
+    </div>
+
+    <!-- Treatment Plans -->
+    <div class="rx-section">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+        <h4 style="font-size:10px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.5px">📋 خطط العلاج</h4>
+        ${ROLE!=='reception'?`<button class="btn btn-outline btn-sm" onclick="modalAddPlan('${id}','${esc(p.name)}')">+ خطة جديدة</button>`:''}
+      </div>
+      ${(plans||[]).length===0?'<div style="color:var(--muted);font-size:12px;text-align:center;padding:16px">لا توجد خطة علاج</div>':''}
+      ${(plans||[]).map(pl=>`
+        <div class="tbl-wrap" style="margin-bottom:10px">
+          <div class="tbl-hdr" style="padding:9px 14px">
+            <div>
+              <strong style="font-size:12.5px">${esc(pl.title||'خطة علاج')}</strong>
+              <span style="font-size:10.5px;color:var(--muted);margin-right:8px">${pl.created_at?.slice(0,10)||''}</span>
+            </div>
+            <div style="display:flex;gap:5px">
+              ${ROLE==='admin'?`<button class="btn btn-danger btn-sm" onclick="deletePlan('${pl.id}','${id}')">🗑</button>`:''}
+            </div>
+          </div>
+          <div style="padding:10px 14px">
+            ${(pl.items||[]).map((item,i)=>`
+              <div class="treatment-item ${item.status}">
+                <input type="checkbox" ${item.status==='done'?'checked':''} onchange="togglePlanItem('${pl.id}','${id}',${i},this.checked)" style="width:auto;accent-color:var(--teal)">
+                <div style="flex:1">
+                  <div style="font-size:12.5px;font-weight:600">${esc(item.service||'')}</div>
+                  ${item.tooth?`<div style="font-size:10.5px;color:var(--muted)">سن #${item.tooth}</div>`:''}
+                </div>
+                <div style="text-align:left">
+                  <div style="font-size:12px;color:var(--teal);font-weight:700">${item.cost?fmt(item.cost):''}</div>
+                  <span class="badge ${item.status==='done'?'bg':item.status==='inprogress'?'bb':'bgr'}">${{done:'منتهي',inprogress:'جاري',pending:'لم يبدأ'}[item.status]||item.status}</span>
+                </div>
+              </div>`).join('')}
+            <div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border);display:flex;justify-content:space-between;font-size:12px">
+              <span style="color:var(--muted)">الإجمالي</span>
+              <strong style="color:var(--teal)">${fmt((pl.items||[]).reduce((s,i)=>s+(i.cost||0),0))}</strong>
+            </div>
+          </div>
+        </div>`).join('')}
+    </div>
+
+    <div class="detail-grid">
+      <div class="info-section">
+        <h4>معلومات المريض</h4>
+        ${ir('الهاتف',ROLE==='doctor'?'<span style="color:var(--muted)">••••••••••</span>':`<span dir="ltr">${esc(p.phone||'—')}</span>`)}
+        ${ir('الهوية',esc(p.national_id||'—'))}
+        ${ir('الميلاد',p.dob||'—')}
+        ${ir('العنوان',esc(p.address||'—'))}
+        ${ir('المصدر',p.source_page?`<span class="badge bt">${esc(p.source_page)}</span>`:p.acquisition_source?`<span class="badge bgr">${esc(p.acquisition_source)}</span>`:'—')}
+        ${p.notes?`<div style="margin-top:8px;font-size:11.5px;color:var(--muted);line-height:1.6">${esc(p.notes)}</div>`:''}
+        <div style="margin-top:10px;display:flex;gap:5px;flex-wrap:wrap">
+          <button class="btn btn-outline btn-sm" onclick="modalEditPatient('${id}')">✏ تعديل</button>
+          <button class="btn btn-outline btn-sm" onclick="modalEditFollowup('${id}','${p.followup_date||''}','${esc(p.followup_note||'')}','${p.refused_treatment}')">📅 متابعة</button>
+          <button class="btn btn-outline btn-sm" onclick="modalEditMedical('${id}',${JSON.stringify({is_smoker:!!p.is_smoker,has_allergy:!!p.has_allergy,allergy_details:p.allergy_details||'',has_diabetes:!!p.has_diabetes,has_hypertension:!!p.has_hypertension,has_heart_disease:!!p.has_heart_disease,chronic_notes:p.chronic_notes||''})})">🏥 طبي</button>
+        </div>
+      </div>
+      <div class="info-section">
+        <h4>الملخص المالي</h4>
+        ${ir('المدفوع',`<span style="color:var(--success);font-weight:800">${fmt(paid)}</span>`)}
+        ${ir('المتبقي',`<span style="color:${rem>0?'var(--danger)':'var(--success)'};font-weight:800">${rem>0?fmt(rem):'✓ لا دين'}</span>`)}
+        ${ir('LTV',`<span style="color:var(--teal);font-weight:800">${fmt(paid)}</span>`)}
+        ${ir('الجلسات',`<strong>${(pays||[]).length}</strong>`)}
+        ${p.followup_date?ir('المتابعة',`<span style="color:var(--warning);font-weight:700">📅 ${p.followup_date}</span>`):''}
+        ${p.followup_note?`<div style="margin-top:6px;font-size:11px;color:var(--muted)">${esc(p.followup_note)}</div>`:''}
+      </div>
+    </div>
+
+    <div class="detail-grid">
+      <div>
+        <div class="tbl-wrap">
+          <div class="tbl-hdr"><h3>سجل المدفوعات</h3></div>
+          <table><thead><tr><th>التاريخ</th><th>الخدمة</th><th>السن</th><th>الكلي</th><th>المدفوع</th><th>المتبقي</th>${ROLE==='admin'?'<th></th>':''}</tr></thead>
+          <tbody>${(pays||[]).map(x=>`<tr>
+            <td>${x.date}</td><td>${esc(x.service||'—')}</td>
+            <td>${x.tooth_number?`<span class="badge bb">#${x.tooth_number}</span>`:'—'}</td>
+            <td>${fmt(x.total_amount)}</td>
+            <td style="color:var(--success);font-weight:700">${fmt(x.paid_amount)}</td>
+            <td>${x.remaining>0?`<span style="color:var(--danger);font-weight:700">${fmt(x.remaining)}</span>`:'<span class="badge bg">✓</span>'}</td>
+            ${ROLE==='admin'?`<td style="white-space:nowrap"><button class="btn btn-outline btn-sm" onclick="modalEditPayment('${x.id}','${id}')">✏</button> <button class="btn btn-danger btn-sm" onclick="deletePayment('${x.id}','${id}')">🗑</button></td>`:''}
+          </tr>`).join('')||nr(ROLE==='admin'?7:6,'لا توجد مدفوعات')}</tbody></table>
+        </div>
+        <div class="tbl-wrap">
+          <div class="tbl-hdr"><h3>المواعيد</h3></div>
+          <table><thead><tr><th>التاريخ</th><th>الخدمة</th><th>الطبيب</th><th>الحالة</th></tr></thead>
+          <tbody>${(appts||[]).map(a=>`<tr>
+            <td>${a.date}</td><td>${esc(a.service||'—')}</td><td>${esc(a.doctor_name||'—')}</td>
+            <td><span class="badge ${a.status==='مؤكد'?'bg':'by'}">${a.status}</span></td>
+          </tr>`).join('')||nr(4,'لا مواعيد')}</tbody></table>
+        </div>
+      </div>
+      <div class="info-section">
+        <h4>الصور والملفات (${(files||[]).length})</h4>
+        ${photoHtml('all')}
+      </div>
+    </div>`;
+}
+
+window.filterPhotos=function(pid,cat){openPatient(pid);}
+
+function ir(k,vv){return `<div class="info-row"><span class="k">${k}</span><span class="v">${vv}</span></div>`}
+
+// ── Treatment Plans ───────────────────────────────────
+function modalAddPlan(pid,pname){
+  modal(`خطة علاج — ${pname}`,`
+    <div class="form-group"><label>عنوان الخطة</label><input id="pl-title" placeholder="مثال: خطة تقويم شاملة"></div>
+    <div id="pl-items" style="margin-bottom:12px"></div>
+    <button class="btn btn-outline btn-sm" onclick="addPlanItem()" style="width:100%;justify-content:center">+ إضافة خدمة</button>
+    <div class="form-actions">
+      <button class="btn btn-outline" onclick="closeModal()">إلغاء</button>
+      <button class="btn btn-primary" onclick="savePlan('${pid}')">حفظ الخطة</button>
+    </div>`);
+  addPlanItem();
+}
+
+let planItems=[];
+function addPlanItem(){
+  planItems=planItems||[];
+  const idx=Date.now();
+  const svcs=['حشو','تلبيس','علاج عصب','خلع','زراعة','تقويم','تبييض','فينير','تنظيف','جسر'];
+  const div=document.createElement('div');
+  div.style.cssText='display:grid;grid-template-columns:1fr 60px 100px auto;gap:6px;margin-bottom:7px;align-items:center';
+  div.innerHTML=`
+    <select class="pl-svc" style="padding:7px 8px;border:1.5px solid var(--border);border-radius:7px;font-family:'Cairo',sans-serif;font-size:12px"><option value="">الخدمة</option>${svcs.map(s=>`<option>${s}</option>`).join('')}</select>
+    <input class="pl-tooth" type="number" placeholder="سن" min="11" max="48" style="padding:7px 8px;border:1.5px solid var(--border);border-radius:7px;font-family:'Cairo',sans-serif;font-size:12px">
+    <input class="pl-cost" type="number" placeholder="التكلفة" style="padding:7px 8px;border:1.5px solid var(--border);border-radius:7px;font-family:'Cairo',sans-serif;font-size:12px">
+    <button class="btn btn-danger btn-sm" onclick="this.parentElement.remove()">✕</button>`;
+  document.getElementById('pl-items').appendChild(div);
+}
+
+async function savePlan(pid){
+  const title=v('pl-title')||'خطة علاج';
+  const rows=document.getElementById('pl-items').querySelectorAll('div');
+  const items=[];
+  rows.forEach(row=>{
+    const svc=row.querySelector('.pl-svc')?.value;
+    const tooth=row.querySelector('.pl-tooth')?.value;
+    const cost=Number(row.querySelector('.pl-cost')?.value||0);
+    if(svc)items.push({service:svc,tooth:tooth||null,cost,status:'pending'});
+  });
+  if(!items.length){alert('أضف خدمة واحدة على الأقل');return;}
+  await sb.from('treatment_plans').insert({patient_id:pid,title,items});
+  closeModal();openPatient(pid);
+}
+
+async function togglePlanItem(planId,patientId,idx,checked){
+  const{data:pl}=await sb.from('treatment_plans').select('items').eq('id',planId).single();
+  if(!pl)return;
+  const items=[...(pl.items||[])];
+  if(items[idx])items[idx].status=checked?'done':'pending';
+  await sb.from('treatment_plans').update({items}).eq('id',planId);
+  openPatient(patientId);
+}
+
+async function deletePlan(planId,patientId){
+  if(!confirm('حذف خطة العلاج؟'))return;
+  await sb.from('treatment_plans').delete().eq('id',planId);
+  openPatient(patientId);
+}
+
+// ── Prescription / Print ──────────────────────────────
+function printRx(pid,pname){
+  modal(`🖨 وصفة / تعليمات — ${pname}`,`
+    <div class="form-group"><label>الأدوية والجرعة</label><textarea id="rx-drugs" rows="3" placeholder="مثال: أموكسيسيلين 500mg مرتين يومياً لمدة 5 أيام&#10;ايبوبروفين 400mg عند الألم"></textarea></div>
+    <div class="form-group"><label>تعليمات ما بعد العلاج</label><textarea id="rx-inst" rows="3" placeholder="مثال: تجنب الطعام الساخن لمدة ساعة&#10;لا تلمس منطقة العلاج بلسانك"></textarea></div>
+    <div class="form-group"><label>الطبيب المعالج</label><input id="rx-dr" value="${USER.user_metadata?.name||''}"></div>
+    <div class="form-actions">
+      <button class="btn btn-outline" onclick="closeModal()">إلغاء</button>
+      <button class="btn btn-primary" onclick="doPrint('${esc(pname)}')">🖨 طباعة</button>
+    </div>`);
+}
+
+function doPrint(pname){
+  const drugs=v('rx-drugs'),inst=v('rx-inst'),dr=v('rx-dr');
+  const win=window.open('','_blank');
+  win.document.write(`<!DOCTYPE html><html dir="rtl"><head><meta charset="UTF-8"><title>وصفة — ${pname}</title>
+  <style>body{font-family:'Cairo',sans-serif;padding:30px;max-width:500px;margin:0 auto}
+  h1{font-size:20px;margin-bottom:4px;color:#0c1829}h2{font-size:13px;color:#64748b;margin-bottom:24px}
+  h3{font-size:14px;font-weight:800;margin-bottom:8px;color:#0c1829;border-bottom:2px solid #0d9488;padding-bottom:4px}
+  p{font-size:13px;line-height:1.9;white-space:pre-line;color:#334155}
+  .footer{margin-top:40px;border-top:1px solid #e2e8f0;padding-top:14px;font-size:12px;color:#94a3b8;display:flex;justify-content:space-between}
+  @media print{button{display:none}}</style></head><body>
+  <h1>🦷 عيادات ڤيرونا</h1><h2>كركوك — نظام الإدارة المتكامل</h2>
+  <h3>المريض: ${pname}</h3>
+  <h3>الأدوية والجرعة</h3><p>${drugs||'—'}</p>
+  <h3>تعليمات ما بعد العلاج</h3><p>${inst||'—'}</p>
+  <div class="footer"><span>الطبيب: ${dr}</span><span>${todayStr()}</span></div>
+  <script>window.onload=()=>window.print()<\/script></body></html>`);
+  win.document.close();
+  closeModal();
+}
+
+// ── WhatsApp ──────────────────────────────────────────
+function sendWhatsApp(phone,pname){
+  modal(`💬 إرسال واتساب — ${pname}`,`
+    <div class="form-group"><label>نوع الرسالة</label>
+      <select id="wa-type" onchange="updateWaMsg(this.value,'${esc(pname)}')">
+        <option value="appt">تذكير موعد</option>
+        <option value="followup">متابعة</option>
+        <option value="payment">تذكير دفعة</option>
+        <option value="custom">رسالة مخصصة</option>
+      </select>
+    </div>
+    <div class="form-group"><label>الرسالة</label><textarea id="wa-msg" rows="4"></textarea></div>
+    <div class="form-actions">
+      <button class="btn btn-outline" onclick="closeModal()">إلغاء</button>
+      <button class="btn btn-success" onclick="openWa('${esc(phone)}')">فتح واتساب ←</button>
+    </div>`);
+  updateWaMsg('appt',pname);
+}
+
+function updateWaMsg(type,pname){
+  const msgs={
+    appt:`السلام عليكم ${pname}،\nنذكركم بموعدكم في عيادات ڤيرونا غداً.\nنرجو الحضور في الوقت المحدد.\nشكراً 🦷`,
+    followup:`السلام عليكم ${pname}،\nحرصاً على صحتكم، نرجو تحديد موعد للمتابعة مع طبيبكم في عيادات ڤيرونا.\nللحجز تواصلوا معنا 🦷`,
+    payment:`السلام عليكم ${pname}،\nنذكركم بوجود مبلغ مستحق لعيادات ڤيرونا.\nنرجو التواصل لتسوية الحساب.\nشكراً 🦷`,
+    custom:'',
+  };
+  const el=document.getElementById('wa-msg');
+  if(el)el.value=msgs[type]||'';
+}
+
+function openWa(phone){
+  const msg=v('wa-msg');
+  const clean=phone.replace(/\D/g,'');
+  const num=clean.startsWith('0')?'964'+clean.slice(1):clean;
+  window.open(`https://wa.me/${num}?text=${encodeURIComponent(msg)}`,'_blank');
+  closeModal();
+}
+
+// ── Tooth Modal ───────────────────────────────────────
+function openToothModal(pid,n,pname){
+  const t=['حشو','تلبيس','علاج عصب','خلع','زراعة','تقويم','تبييض','ترميم','فينير','جسر','أخرى'];
+  modal(`سن #${n} — ${pname}`,`
+    <div class="form-group"><label>نوع العلاج</label><select id="tt"><option value="">اختر</option>${t.map(x=>`<option>${x}</option>`).join('')}</select></div>
+    <div class="form-group"><label>الحالة</label>
+      <select id="ts">
+        <option value="treated">تم العلاج</option>
+        <option value="crown_needed">تم العلاج — يحتاج تغليف</option>
+        <option value="planned">مخطط</option>
+        <option value="needs">يحتاج علاج</option>
+        <option value="extracted">مخلوع</option>
+        <option value="implant">زراعة</option>
+      </select></div>
+    <div class="form-row">
+      <div class="form-group"><label>التكلفة (د.ع)</label><input id="tc" type="number" placeholder="0"></div>
+      <div class="form-group"><label>الطبيب</label><input id="tdr" placeholder="اسم الطبيب"></div>
+    </div>
+    <div class="form-group"><label>ملاحظات</label><textarea id="tn" rows="2"></textarea></div>
+    <div class="form-actions">
+      <button class="btn btn-outline" onclick="closeModal()">إلغاء</button>
+      <button class="btn btn-primary" onclick="saveTooth('${pid}','${n}')">حفظ</button>
+    </div>`);
+}
+
+async function saveTooth(pid,n){
+  const treatment=v('tt'),status=v('ts'),cost=Number(v('tc')||0),doctor_name=v('tdr').trim(),notes=v('tn').trim();
+  const{data:ex}=await sb.from('tooth_records').select('id').eq('patient_id',pid).eq('tooth_number',n).maybeSingle();
+  if(ex)await sb.from('tooth_records').update({treatment,status,cost,doctor_name,notes}).eq('id',ex.id);
+  else await sb.from('tooth_records').insert({patient_id:pid,tooth_number:Number(n),treatment,status,cost,doctor_name,notes});
+  closeModal();openPatient(pid);
+}
+
+// ── Add/Edit Patient ──────────────────────────────────
+function modalAddPatient(){
+  const srcs=['إنستغرام','فيسبوك','جوجل','توصية','إعلان','مررت بالمركز','أخرى'];
+  modal('مريض جديد',`
+    <div class="form-group"><label>الاسم *</label><input id="pn"></div>
+    <div class="form-row">
+      <div class="form-group"><label>الهاتف</label><input id="pp" dir="ltr"></div>
+      <div class="form-group"><label>الميلاد</label><input id="pd" type="date"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>الهوية</label><input id="pnid"></div>
+      <div class="form-group"><label>العنوان</label><input id="pa"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>مصدر المعرفة</label><select id="ps"><option value="">اختر</option>${srcs.map(s=>`<option>${s}</option>`).join('')}</select></div>
+      <div class="form-group"><label>الصفحة / المُحيل</label><input id="psrc" placeholder="صفحة د. أسامة..."></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>تاريخ المتابعة</label><input id="pfup" type="date"></div>
+      <div class="form-group"><label>ملاحظة المتابعة</label><input id="pfupn"></div>
+    </div>
+    <div style="background:#f8fafc;border-radius:9px;padding:12px;margin-bottom:12px">
+      <div style="font-size:10.5px;font-weight:800;color:var(--muted);margin-bottom:9px;text-transform:uppercase">🏥 المعلومات الطبية</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-bottom:9px">
+        <label style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:600;cursor:pointer"><input type="checkbox" id="p-smoker" style="width:auto;accent-color:var(--danger)"> 🚬 مدخن</label>
+        <label style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:600;cursor:pointer"><input type="checkbox" id="p-allergy" style="width:auto;accent-color:var(--warning)" onchange="document.getElementById('p-ar').style.display=this.checked?'block':'none'"> ⚠ حساسية</label>
+        <label style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:600;cursor:pointer"><input type="checkbox" id="p-diabetes" style="width:auto;accent-color:var(--danger)"> 💉 سكري</label>
+        <label style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:600;cursor:pointer"><input type="checkbox" id="p-hyper" style="width:auto;accent-color:var(--danger)"> ❤️ ضغط مرتفع</label>
+        <label style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:600;cursor:pointer"><input type="checkbox" id="p-heart" style="width:auto;accent-color:var(--danger)"> 🫀 قلب</label>
+      </div>
+      <div id="p-ar" style="display:none"><div class="form-group" style="margin-bottom:0"><label>تفاصيل الحساسية</label><input id="p-ad" placeholder="البنسلين، أسبرين..."></div></div>
+    </div>
+    <label style="display:flex;align-items:center;gap:7px;font-size:12px;font-weight:600;cursor:pointer;margin-bottom:12px;padding:9px;background:#fef2f2;border-radius:8px">
+      <input type="checkbox" id="prefused" style="width:auto;accent-color:var(--danger)"> ⚠ رفض العلاج
+    </label>
+    <div class="form-group"><label>ملاحظات</label><textarea id="pno" rows="2"></textarea></div>
+    <div class="form-actions">
+      <button class="btn btn-outline" onclick="closeModal()">إلغاء</button>
+      <button class="btn btn-primary" onclick="savePatient()">حفظ</button>
+    </div>`);
+}
+
+async function savePatient(){
+  const name=v('pn').trim();if(!name){alert('أدخل الاسم');return;}
+  const{count}=await sb.from('patients').select('*',{count:'exact',head:true});
+  const pNum='V-'+String((count||0)+1).padStart(4,'0');
+  await sb.from('patients').insert({
+    name,phone:v('pp').trim(),dob:v('pd')||null,national_id:v('pnid').trim(),
+    address:v('pa').trim(),acquisition_source:v('ps'),source_page:v('psrc').trim(),
+    followup_date:v('pfup')||null,followup_note:v('pfupn').trim(),
+    refused_treatment:document.getElementById('prefused')?.checked||false,
+    notes:v('pno').trim(),patient_number:pNum,
+    is_smoker:document.getElementById('p-smoker')?.checked||false,
+    has_allergy:document.getElementById('p-allergy')?.checked||false,
+    allergy_details:v('p-ad').trim(),
+    has_diabetes:document.getElementById('p-diabetes')?.checked||false,
+    has_hypertension:document.getElementById('p-hyper')?.checked||false,
+    has_heart_disease:document.getElementById('p-heart')?.checked||false,
+  });
+  closeModal();PT_PAGE=1;renderPatients();
+}
+
+async function modalEditPatient(pid){
+  const{data:p}=await sb.from('patients').select('*').eq('id',pid).single();if(!p)return;
+  const srcs=['إنستغرام','فيسبوك','جوجل','توصية','إعلان','مررت بالمركز','أخرى'];
+  modal('تعديل المعلومات الشخصية',`
+    <div class="form-group"><label>الاسم *</label><input id="ep-n" value="${esc(p.name||'')}"></div>
+    <div class="form-row">
+      <div class="form-group"><label>الهاتف</label><input id="ep-p" dir="ltr" value="${esc(p.phone||'')}"></div>
+      <div class="form-group"><label>الميلاد</label><input id="ep-d" type="date" value="${p.dob||''}"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>الهوية</label><input id="ep-nid" value="${esc(p.national_id||'')}"></div>
+      <div class="form-group"><label>العنوان</label><input id="ep-a" value="${esc(p.address||'')}"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>مصدر المعرفة</label><select id="ep-src"><option value="">اختر</option>${srcs.map(s=>`<option ${p.acquisition_source===s?'selected':''}>${s}</option>`).join('')}</select></div>
+      <div class="form-group"><label>الصفحة / المُحيل</label><input id="ep-sp" value="${esc(p.source_page||'')}"></div>
+    </div>
+    <div class="form-group"><label>ملاحظات</label><textarea id="ep-no" rows="2">${esc(p.notes||'')}</textarea></div>
+    <div class="form-actions">
+      <button class="btn btn-outline" onclick="closeModal()">إلغاء</button>
+      <button class="btn btn-primary" onclick="saveEditPatient('${pid}')">حفظ</button>
+    </div>`);
+}
+
+async function saveEditPatient(pid){
+  const name=v('ep-n').trim();if(!name){alert('أدخل الاسم');return;}
+  await sb.from('patients').update({name,phone:v('ep-p').trim(),dob:v('ep-d')||null,national_id:v('ep-nid').trim(),address:v('ep-a').trim(),acquisition_source:v('ep-src'),source_page:v('ep-sp').trim(),notes:v('ep-no').trim()}).eq('id',pid);
+  closeModal();openPatient(pid);
+}
+
+function modalEditFollowup(pid,date,note,refused){
+  modal('تعديل المتابعة',`
+    <div class="form-group"><label>تاريخ المتابعة</label><input id="fud" type="date" value="${date}"></div>
+    <div class="form-group"><label>الملاحظة</label><textarea id="fun" rows="2">${note}</textarea></div>
+    <label style="display:flex;align-items:center;gap:7px;font-size:12px;font-weight:600;cursor:pointer;margin-bottom:12px;padding:9px;background:#fef2f2;border-radius:8px">
+      <input type="checkbox" id="fref" ${refused==='true'||refused===true?'checked':''} style="width:auto;accent-color:var(--danger)"> ⚠ رفض العلاج
+    </label>
+    <div class="form-actions">
+      <button class="btn btn-outline" onclick="closeModal()">إلغاء</button>
+      <button class="btn btn-primary" onclick="saveFollowup('${pid}')">حفظ</button>
+    </div>`);
+}
+async function saveFollowup(pid){
+  await sb.from('patients').update({followup_date:v('fud')||null,followup_note:v('fun').trim(),refused_treatment:document.getElementById('fref')?.checked||false}).eq('id',pid);
+  closeModal();openPatient(pid);
+}
+
+function modalEditMedical(pid,d){
+  if(typeof d==='string')try{d=JSON.parse(d);}catch{d={};}
+  modal('المعلومات الطبية',`
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:13px">
+      ${[['m-smoker','🚬 مدخن',d.is_smoker],['m-allergy','⚠ حساسية',d.has_allergy],['m-diabetes','💉 سكري',d.has_diabetes],['m-hyper','❤️ ضغط',d.has_hypertension],['m-heart','🫀 قلب',d.has_heart_disease]].map(([id,lbl,chk])=>
+      `<label style="display:flex;align-items:center;gap:7px;padding:9px;border-radius:8px;border:1.5px solid var(--border);cursor:pointer;font-size:12.5px;font-weight:600">
+        <input type="checkbox" id="${id}" ${chk?'checked':''} style="width:auto;accent-color:var(--danger)" ${id==='m-allergy'?`onchange="document.getElementById('m-ad-row').style.display=this.checked?'block':'none'"`:''}> ${lbl}
+      </label>`).join('')}
+    </div>
+    <div id="m-ad-row" style="display:${d.has_allergy?'block':'none'}">
+      <div class="form-group"><label>تفاصيل الحساسية</label><input id="m-ad" value="${esc(d.allergy_details||'')}"></div>
+    </div>
+    <div class="form-group"><label>ملاحظات مزمنة أخرى</label><textarea id="m-cn" rows="2">${esc(d.chronic_notes||'')}</textarea></div>
+    <div class="form-actions">
+      <button class="btn btn-outline" onclick="closeModal()">إلغاء</button>
+      <button class="btn btn-primary" onclick="saveMedical('${pid}')">حفظ</button>
+    </div>`);
+}
+async function saveMedical(pid){
+  await sb.from('patients').update({is_smoker:document.getElementById('m-smoker').checked,has_allergy:document.getElementById('m-allergy').checked,allergy_details:v('m-ad').trim(),has_diabetes:document.getElementById('m-diabetes').checked,has_hypertension:document.getElementById('m-hyper').checked,has_heart_disease:document.getElementById('m-heart').checked,chronic_notes:v('m-cn').trim()}).eq('id',pid);
+  closeModal();openPatient(pid);
+}
+
+async function deletePatient(id,name){
+  if(!confirm(`حذف "${name}" نهائياً؟\nسيتم حذف كل بياناته.`))return;
+  await sb.from('patients').delete().eq('id',id);
+  PT_PAGE=1;renderPatients();
+}
+
+// ── File Upload ───────────────────────────────────────
+async function uploadFile(pid,input){
+  const file=input.files[0];if(!file)return;
+  const cats=['xray','before','after','other'];
+  const catLabels=['أشعة','قبل العلاج','بعد العلاج','أخرى'];
+  const catIdx=cats.indexOf(prompt('نوع الملف:\n1. أشعة\n2. قبل العلاج\n3. بعد العلاج\n4. أخرى\nأدخل رقم:')==='1'?'xray':prompt==='2'?'before':prompt==='3'?'after':'other');
+  const category=prompt('نوع الملف: xray / before / after / other')||'other';
+  const desc=prompt('وصف الملف:')||file.name;
+  const ext=file.name.split('.').pop();
+  const path=`${pid}/${Date.now()}.${ext}`;
+  const{error:ue}=await sb.storage.from('patient-files').upload(path,file);
+  if(ue){alert('خطأ: '+ue.message);return;}
+  const{data:{publicUrl}}=sb.storage.from('patient-files').getPublicUrl(path);
+  await sb.from('patient_files').insert({patient_id:pid,file_url:publicUrl,file_name:file.name,file_type:file.type,description:desc,category});
+  openPatient(pid);
+}
+
+// ── Appointments ──────────────────────────────────────
+async function renderAppts(){
+  const today=todayStr(),tmrw=tomorrowStr();
+  const[{data:appts},{data:tmrwA},{data:pts}]=await Promise.all([
+    sb.from('appointments').select('*').order('date').order('time'),
+    sb.from('appointments').select('*').eq('date',tmrw).neq('status','ملغي').order('time'),
+    sb.from('patients').select('id,name').order('name').limit(500),
+  ]);
+  document.getElementById('pg-content').innerHTML=`
+    ${(tmrwA||[]).length>0?`<div class="alert a-info" style="margin-bottom:14px">
+      <div><strong>📅 مواعيد الغد — ${tmrwA.length} موعد</strong>
+      <div style="margin-top:7px;display:flex;flex-direction:column;gap:4px">
+        ${(tmrwA||[]).map(a=>`<div style="display:flex;gap:8px;font-size:12px">
+          <strong>${esc(a.patient_name||'—')}</strong><span dir="ltr" style="color:var(--muted)">${a.time||'—'}</span>
+          <span class="badge bgr">${esc(a.service||'—')}</span><span style="color:var(--muted)">${esc(a.doctor_name||'—')}</span>
+          <a href="https://wa.me/964${(a.patient_phone||'').replace(/^0/,'').replace(/\D/g,'')}?text=${encodeURIComponent('تذكير موعدكم غداً في عيادات ڤيرونا 🦷')}" target="_blank" onclick="event.stopPropagation()" class="badge bg" style="text-decoration:none">💬</a>
+        </div>`).join('')}
+      </div></div></div>`:''}
+    <div style="display:flex;justify-content:flex-end;margin-bottom:13px">
+      <button class="btn btn-primary" onclick="modalAddAppt(${JSON.stringify((pts||[]).map(p=>p.id+'|'+p.name))})">+ موعد</button>
+    </div>
+    <div class="tbl-wrap">
+      <div class="tbl-hdr"><h3>المواعيد (${(appts||[]).length})</h3></div>
+      <table><thead><tr><th>المريض</th><th>التاريخ</th><th>الوقت</th><th>الخدمة</th><th>الطبيب</th><th>الحالة</th><th>تحديث</th></tr></thead>
+      <tbody>${(appts||[]).map(a=>`<tr style="${a.date===today?'background:#f0fdf4':a.date===tmrw?'background:#eff6ff':''}">
+        <td style="font-weight:700">${esc(a.patient_name||'—')}</td>
+        <td>${a.date===today?'<span class="badge bg">اليوم</span>':a.date===tmrw?'<span class="badge bb">الغد</span>':a.date}</td>
+        <td dir="ltr">${a.time||'—'}</td>
+        <td><span class="badge bgr">${esc(a.service||'—')}</span></td>
+        <td>${esc(a.doctor_name||'—')}</td>
+        <td><span class="badge ${a.status==='مؤكد'?'bg':a.status==='مكتمل'?'bt':a.status==='انتظار'?'by':'br'}">${a.status}</span></td>
+        <td><select style="font-size:11px;padding:3px 6px;border:1px solid var(--border);border-radius:6px;font-family:'Cairo',sans-serif" onchange="updAppt('${a.id}',this.value)">
+          ${['مؤكد','انتظار','مكتمل','ملغي'].map(s=>`<option ${a.status===s?'selected':''}>${s}</option>`).join('')}
+        </select></td>
+      </tr>`).join('')||nr(7)}</tbody></table>
+    </div>`;
+}
+
+function modalAddApptSingle(pid,pname){modalAddAppt([`${pid}|${pname}`],pid);}
+function modalAddAppt(ptArr,fixId=''){
+  const svcs=['تنظيف','حشو','تقويم','زراعة','تجميل','خلع','علاج عصب','تيجان','تبييض','أخرى'];
+  modal('موعد جديد',`
+    <div class="form-group"><label>المريض *</label>
+      ${fixId?`<input value="${ptArr[0]?.split('|')[1]||''}" readonly style="background:#f8fafc;color:var(--muted)"><input type="hidden" id="apt-p" value="${ptArr[0]}">`:
+        `<select id="apt-p"><option value="">اختر</option>${ptArr.map(s=>{const[id,n]=s.split('|');return`<option value="${id}|${n}">${n}</option>`;}).join('')}</select>`}
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>التاريخ *</label><input id="apt-d" type="date" value="${todayStr()}"></div>
+      <div class="form-group"><label>الوقت</label><input id="apt-t" type="time"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>الخدمة</label><select id="apt-s">${svcs.map(s=>`<option>${s}</option>`).join('')}</select></div>
+      <div class="form-group"><label>الطبيب</label><input id="apt-dr"></div>
+    </div>
+    <div class="form-group"><label>ملاحظات</label><textarea id="apt-n" rows="2"></textarea></div>
+    <div class="form-actions">
+      <button class="btn btn-outline" onclick="closeModal()">إلغاء</button>
+      <button class="btn btn-primary" onclick="saveAppt('${fixId}')">حفظ</button>
+    </div>`);
+}
+async function saveAppt(fixId=''){
+  const pv=v('apt-p');if(!pv){alert('اختر مريضاً');return;}
+  const[pid,pname]=pv.split('|');
+  await sb.from('appointments').insert({patient_id:pid,patient_name:pname,date:v('apt-d'),time:v('apt-t'),service:v('apt-s'),doctor_name:v('apt-dr').trim(),notes:v('apt-n').trim(),status:'مؤكد'});
+  closeModal();if(fixId)openPatient(fixId);else renderAppts();
+}
+async function updAppt(id,status){await sb.from('appointments').update({status}).eq('id',id);}
+
+// ── Payments ──────────────────────────────────────────
+async function renderPayments(){
+  const{data:pays}=await sb.from('payments').select('*').order('date',{ascending:false}).order('created_at',{ascending:false});
+  document.getElementById('pg-content').innerHTML=`
+    <div style="display:flex;justify-content:flex-end;margin-bottom:13px">
+      ${ROLE!=='reception'?`<button class="btn btn-primary" onclick="modalPayGlobal()">+ تسجيل دفعة</button>`:''}
+    </div>
+    <div class="tbl-wrap">
+      <div class="tbl-hdr"><h3>سجل المدفوعات</h3><div class="rt-label"><span class="rt-dot"></span>حي</div></div>
+      <table><thead><tr><th>المريض</th><th>التاريخ</th><th>الخدمة</th><th>الكلي</th><th>المدفوع</th><th>المتبقي</th><th>الطبيب</th>${ROLE==='admin'?'<th></th>':''}</tr></thead>
+      <tbody>${(pays||[]).map(p=>`<tr onclick="openPatient('${p.patient_id}')">
+        <td style="font-weight:700">${esc(p.patient_name||'—')}</td><td>${p.date}</td><td>${esc(p.service||'—')}</td>
+        <td>${fmt(p.total_amount)}</td>
+        <td style="color:var(--success);font-weight:700">${fmt(p.paid_amount)}</td>
+        <td>${p.remaining>0?`<span style="color:var(--danger);font-weight:700">${fmt(p.remaining)}</span>`:'<span class="badge bg">✓</span>'}</td>
+        <td style="color:var(--muted);font-size:11px">${esc(p.doctor_name||'—')}</td>
+        ${ROLE==='admin'?`<td onclick="event.stopPropagation()" style="white-space:nowrap"><button class="btn btn-outline btn-sm" onclick="modalEditPayment('${p.id}','${p.patient_id}')">✏</button> <button class="btn btn-danger btn-sm" onclick="deletePayment('${p.id}','${p.patient_id}')">🗑</button></td>`:''}
+      </tr>`).join('')||nr(ROLE==='admin'?8:7)}</tbody></table>
+    </div>`;
+}
+
+async function modalPayGlobal(){
+  const{data:pts}=await sb.from('patients').select('id,name').order('name').limit(300);
+  modalAddPayment('','',pts||[]);
+}
+
+function modalAddPayment(fixId='',fixName='',pts=[]){
+  modal('تسجيل دفعة',`
+    <div class="form-group"><label>المريض *</label>
+      ${fixId?`<input value="${esc(fixName)}" readonly style="background:#f8fafc;color:var(--muted)">`:
+        `<select id="pay-p"><option value="">اختر</option>${pts.map(p=>`<option value="${p.id}|${p.name}">${p.name}</option>`).join('')}</select>`}
+    </div>
+    <div class="form-group"><label>الخدمة *</label><input id="pay-s" placeholder="تقويم، زراعة..."></div>
+    <div class="form-row">
+      <div class="form-group"><label>رقم السن</label><input id="pay-tooth" type="number" placeholder="مثال: 16" min="11" max="48"></div>
+      <div class="form-group"><label>الطبيب</label><input id="pay-dr"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>المبلغ الكلي (د.ع)</label><input id="pay-total" type="number" placeholder="0" oninput="calcRem()"></div>
+      <div class="form-group"><label>المدفوع الآن (د.ع)</label><input id="pay-paid" type="number" placeholder="0" oninput="calcRem()"></div>
+    </div>
+    <div id="pay-rem-info" class="alert a-info">المتبقي: 0 د.ع</div>
+    <div class="form-group"><label>التاريخ <span style="color:var(--muted);font-size:10.5px">(قابل للتعديل)</span></label><input id="pay-date" type="date" value="${todayStr()}"></div>
+    <div class="form-group"><label>ملاحظات</label><textarea id="pay-n" rows="2"></textarea></div>
+    <div class="form-actions">
+      <button class="btn btn-outline" onclick="closeModal()">إلغاء</button>
+      <button class="btn btn-primary" onclick="savePay('${fixId}','${esc(fixName)}')">حفظ</button>
+    </div>`);
+}
+
+function calcRem(){
+  const t=Number(document.getElementById('pay-total')?.value||0),p=Number(document.getElementById('pay-paid')?.value||0),r=Math.max(0,t-p);
+  const el=document.getElementById('pay-rem-info');
+  if(el){el.textContent=`المتبقي: ${r.toLocaleString('ar-IQ')} د.ع`;el.className=`alert ${r>0?'a-warn':'a-ok'}`;}
+}
+
+async function savePay(fixId,fixName){
+  let pid=fixId,pname=fixName;
+  if(!pid){const pv=v('pay-p');if(!pv){alert('اختر مريضاً');return;}[pid,pname]=pv.split('|');}
+  const total=Number(v('pay-total')||0),paid=Number(v('pay-paid')||0),remaining=Math.max(0,total-paid);
+  const service=v('pay-s').trim();if(!service){alert('أدخل الخدمة');return;}
+  await sb.from('payments').insert({patient_id:pid,patient_name:pname,service,total_amount:total,paid_amount:paid,remaining,date:v('pay-date'),doctor_name:v('pay-dr').trim(),tooth_number:v('pay-tooth')||null,notes:v('pay-n').trim(),recorded_by:USER?.email});
+  closeModal();renderPage(CUR);
+}
+
+async function modalEditPayment(payId,patientId){
+  const{data:pay}=await sb.from('payments').select('*').eq('id',payId).single();if(!pay)return;
+  modal('تعديل الدفعة',`
+    <div class="form-group"><label>الخدمة *</label><input id="ep-svc" value="${esc(pay.service||'')}"></div>
+    <div class="form-row">
+      <div class="form-group"><label>المبلغ الكلي</label><input id="ep-total" type="number" value="${pay.total_amount||0}" oninput="calcRemEdit()"></div>
+      <div class="form-group"><label>المدفوع</label><input id="ep-paid" type="number" value="${pay.paid_amount||0}" oninput="calcRemEdit()"></div>
+    </div>
+    <div id="ep-rem-info" class="alert a-info">المتبقي: ${fmt(pay.remaining||0)}</div>
+    <div class="form-row">
+      <div class="form-group"><label>التاريخ</label><input id="ep-date" type="date" value="${pay.date||todayStr()}"></div>
+      <div class="form-group"><label>الطبيب</label><input id="ep-dr" value="${esc(pay.doctor_name||'')}"></div>
+    </div>
+    <div class="form-group"><label>ملاحظات</label><textarea id="ep-note" rows="2">${esc(pay.notes||'')}</textarea></div>
+    <div class="form-actions">
+      <button class="btn btn-outline" onclick="closeModal()">إلغاء</button>
+      <button class="btn btn-primary" onclick="saveEditPayment('${payId}','${patientId}')">حفظ</button>
+    </div>`);
+}
+
+function calcRemEdit(){
+  const t=Number(document.getElementById('ep-total')?.value||0),p=Number(document.getElementById('ep-paid')?.value||0),r=Math.max(0,t-p);
+  const el=document.getElementById('ep-rem-info');
+  if(el){el.textContent=`المتبقي: ${r.toLocaleString('ar-IQ')} د.ع`;el.className=`alert ${r>0?'a-warn':'a-ok'}`;}
+}
+
+async function saveEditPayment(payId,patientId){
+  const svc=v('ep-svc').trim();if(!svc){alert('أدخل الخدمة');return;}
+  const total=Number(v('ep-total')||0),paid=Number(v('ep-paid')||0),remaining=Math.max(0,total-paid);
+  await sb.from('payments').update({service:svc,total_amount:total,paid_amount:paid,remaining,date:v('ep-date'),doctor_name:v('ep-dr').trim(),notes:v('ep-note').trim()}).eq('id',payId);
+  closeModal();if(patientId)openPatient(patientId);else renderPayments();
+}
+
+async function deletePayment(payId,patientId){
+  if(!confirm('حذف هذه الدفعة؟'))return;
+  await sb.from('payments').delete().eq('id',payId);
+  if(patientId)openPatient(patientId);else renderPayments();
+}
+
+// ── Debts ─────────────────────────────────────────────
+async function renderDebts(){
+  const{data:pays}=await sb.from('payments').select('patient_id,patient_name,remaining,service,date').gt('remaining',0).order('remaining',{ascending:false});
+  // Group by patient
+  const map={};
+  (pays||[]).forEach(p=>{
+    if(!map[p.patient_id])map[p.patient_id]={name:p.patient_name,total:0,items:[]};
+    map[p.patient_id].total+=p.remaining;
+    map[p.patient_id].items.push(p);
+  });
+  const list=Object.entries(map).sort((a,b)=>b[1].total-a[1].total);
+  const grandTotal=list.reduce((s,[,d])=>s+d.total,0);
+
+  document.getElementById('pg-content').innerHTML=`
+    <div class="cards" style="grid-template-columns:repeat(3,1fr);margin-bottom:18px">
+      <div class="card" style="border-right-color:var(--danger)"><div class="lbl">إجمالي الديون</div><div class="val" style="font-size:16px;color:var(--danger)">${fmt(grandTotal)}</div></div>
+      <div class="card"><div class="lbl">عدد المدينين</div><div class="val">${list.length}</div></div>
+      <div class="card"><div class="lbl">متوسط الدين</div><div class="val" style="font-size:16px">${list.length?fmt(Math.round(grandTotal/list.length)):'—'}</div></div>
+    </div>
+    <div class="tbl-wrap">
+      <div class="tbl-hdr"><h3>قائمة الديون المعلقة</h3></div>
+      ${list.map(([pid,d])=>`
+        <div class="debt-row" onclick="openPatient('${pid}')">
+          <div>
+            <div style="font-weight:700;font-size:13px">${esc(d.name)}</div>
+            <div style="font-size:11px;color:var(--muted);margin-top:2px">${d.items.map(i=>esc(i.service||'—')).join(' · ')}</div>
+          </div>
+          <div style="text-align:left;display:flex;align-items:center;gap:10px">
+            <span style="color:var(--danger);font-weight:800;font-size:14px">${fmt(d.total)}</span>
+            <a href="https://wa.me/?" onclick="event.stopPropagation()" class="badge by" style="text-decoration:none;cursor:pointer" onclick="event.stopPropagation()">💬 تذكير</a>
+          </div>
+        </div>`).join('')||`<div style="text-align:center;color:var(--success);padding:40px;font-size:13px;font-weight:700">✓ لا توجد ديون معلقة</div>`}
+    </div>`;
+}
+
+// ── Expenses ──────────────────────────────────────────
+async function renderExpenses(){
+  const{data:exps}=await sb.from('expenses').select('*').order('date',{ascending:false});
+  const total=(exps||[]).reduce((s,e)=>s+e.amount,0);
+  const mkt=(exps||[]).filter(e=>e.is_marketing).reduce((s,e)=>s+e.amount,0);
+  // Group by category
+  const catMap={};(exps||[]).forEach(e=>{if(!catMap[e.category])catMap[e.category]=0;catMap[e.category]+=e.amount;});
+  const catList=Object.entries(catMap).sort((a,b)=>b[1]-a[1]).slice(0,5);
+
+  document.getElementById('pg-content').innerHTML=`
+    <div class="cards" style="grid-template-columns:repeat(3,1fr)">
+      <div class="card" style="border-right-color:var(--danger)"><div class="lbl">إجمالي المصاريف</div><div class="val" style="font-size:16px;color:var(--danger)">${fmt(total)}</div></div>
+      <div class="card" style="border-right-color:var(--warning)"><div class="lbl">مصاريف التسويق</div><div class="val" style="font-size:16px;color:var(--warning)">${fmt(mkt)}</div></div>
+      <div class="card"><div class="lbl">تشغيلية</div><div class="val" style="font-size:16px">${fmt(total-mkt)}</div></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px">
+      <div class="rc">
+        <h3>أكبر فئات الإنفاق</h3>
+        ${catList.map(([cat,amt])=>`<div class="metric-row">
+          <span style="font-size:12px">${esc(cat)}</span>
+          <div style="display:flex;align-items:center;gap:7px">
+            <div style="width:70px;height:6px;background:var(--border);border-radius:3px"><div style="width:${Math.round(amt/total*100)}%;height:100%;background:var(--teal);border-radius:3px"></div></div>
+            <strong style="font-size:12px">${fmt(amt)}</strong>
+          </div>
+        </div>`).join('')}
+      </div>
+      <div style="display:flex;justify-content:flex-end;align-items:flex-start">
+        <button class="btn btn-primary" onclick="modalAddExp()">+ إضافة مصروف</button>
+      </div>
+    </div>
+    <div class="tbl-wrap">
+      <div class="tbl-hdr"><h3>سجل المصاريف</h3></div>
+      <table><thead><tr><th>التاريخ</th><th>الفئة</th><th>البيان</th><th>المبلغ</th><th>النوع</th></tr></thead>
+      <tbody>${(exps||[]).map(e=>`<tr>
+        <td>${e.date}</td><td><span class="badge bgr">${esc(e.category)}</span></td><td>${esc(e.description)}</td>
+        <td style="color:var(--danger);font-weight:700">${fmt(e.amount)}</td>
+        <td>${e.is_marketing?'<span class="badge bo">تسويق</span>':'<span class="badge bgr">تشغيل</span>'}</td>
+      </tr>`).join('')||nr(5)}</tbody></table>
+    </div>`;
+}
+
+function modalAddExp(){
+  const cats=['مستلزمات طبية','رواتب','إيجار','كهرباء','ماء','إنترنت','صيانة','إعلانات','تسويق رقمي','🔬 مختبر أسنان','🦷 شركة زراعة','🏢 مكتب أسنان','💊 أدوية ومخدرات','🛠 معدات وأجهزة','أخرى'];
+  modal('إضافة مصروف',`
+    <div class="form-row">
+      <div class="form-group"><label>الفئة</label><select id="ex-c">${cats.map(c=>`<option>${c}</option>`).join('')}</select></div>
+      <div class="form-group"><label>التاريخ</label><input id="ex-d" type="date" value="${todayStr()}"></div>
+    </div>
+    <div class="form-group"><label>البيان *</label><input id="ex-desc"></div>
+    <div class="form-group"><label>المبلغ (د.ع) *</label><input id="ex-a" type="number" placeholder="0"></div>
+    <label style="display:flex;align-items:center;gap:7px;font-size:12px;cursor:pointer;margin-bottom:12px">
+      <input type="checkbox" id="ex-mkt" style="width:auto;accent-color:var(--teal)"> مصروف تسويقي (يُحتسب في CAC)
+    </label>
+    <div class="form-actions">
+      <button class="btn btn-outline" onclick="closeModal()">إلغاء</button>
+      <button class="btn btn-primary" onclick="saveExp()">حفظ</button>
+    </div>`);
+}
+async function saveExp(){
+  const desc=v('ex-desc').trim(),amount=Number(v('ex-a')||0);
+  if(!desc||!amount){alert('أدخل البيان والمبلغ');return;}
+  await sb.from('expenses').insert({category:v('ex-c'),description:desc,amount,date:v('ex-d'),is_marketing:document.getElementById('ex-mkt').checked});
+  closeModal();renderExpenses();
+}
+
+// ── Doctor Stats ──────────────────────────────────────
+async function renderDoctors(){
+  const mo=RPT_MONTH+'-01',moEnd=RPT_MONTH+'-31';
+  const months=[];const d=new Date();for(let i=0;i<12;i++){const y=d.getFullYear(),m=String(d.getMonth()+1).padStart(2,'0');months.push(`${y}-${m}`);d.setMonth(d.getMonth()-1);}
+
+  // Load doctor percentages from localStorage
+  const getDrPct=(name)=>Number(localStorage.getItem('dr_pct_'+name)||40);
+
+  const{data:pays}=await sb.from('payments').select('doctor_name,paid_amount,patient_id,date').gte('date',mo).lte('date',moEnd);
+  const map={};
+  (pays||[]).forEach(p=>{
+    const dr=p.doctor_name||'غير محدد';
+    if(!map[dr])map[dr]={income:0,patients:new Set(),sessions:0};
+    map[dr].income+=p.paid_amount||0;
+    map[dr].patients.add(p.patient_id);
+    map[dr].sessions++;
+  });
+
+  document.getElementById('pg-content').innerHTML=`
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:18px;flex-wrap:wrap">
+      <label style="font-size:13px;font-weight:700">📅 الشهر:</label>
+      <select style="padding:7px 11px;border:1.5px solid var(--border);border-radius:8px;font-family:'Cairo',sans-serif;font-size:12.5px;outline:none" onchange="RPT_MONTH=this.value;renderDoctors()">
+        ${months.map(m=>`<option value="${m}" ${m===RPT_MONTH?'selected':''}>${m}</option>`).join('')}
+      </select>
+    </div>
+
+    <div class="tbl-wrap">
+      <div class="tbl-hdr">
+        <h3>أداء الأطباء وحصصهم — ${RPT_MONTH}</h3>
+        <span style="font-size:11px;color:var(--muted)">النسبة قابلة للتعديل لكل طبيب</span>
+      </div>
+      <table>
+        <thead><tr>
+          <th>الطبيب</th>
+          <th>الإيرادات</th>
+          <th>المرضى</th>
+          <th>الجلسات</th>
+          <th>نسبة الطبيب %</th>
+          <th>حصة الطبيب</th>
+          <th>حصة المركز</th>
+        </tr></thead>
+        <tbody>${Object.entries(map).sort((a,b)=>b[1].income-a[1].income).map(([dr,d])=>{
+          const pct=getDrPct(dr);
+          const drShare=Math.round(d.income*pct/100);
+          const clinicShare=d.income-drShare;
+          return`<tr>
+            <td style="font-weight:700">${esc(dr)}</td>
+            <td style="color:var(--success);font-weight:800">${fmt(d.income)}</td>
+            <td><strong>${d.patients.size}</strong></td>
+            <td>${d.sessions}</td>
+            <td>
+              <div style="display:flex;align-items:center;gap:6px">
+                <input type="number" value="${pct}" min="0" max="100"
+                  style="width:60px;padding:4px 6px;border:1.5px solid var(--border);border-radius:6px;font-family:'Cairo',sans-serif;font-size:12px;text-align:center"
+                  onchange="saveDrPct('${esc(dr)}',this.value);renderDoctors()">
+                <span style="font-size:11px;color:var(--muted)">%</span>
+              </div>
+            </td>
+            <td style="color:var(--teal);font-weight:800">${fmt(drShare)}</td>
+            <td style="color:var(--navy);font-weight:700">${fmt(clinicShare)}</td>
+          </tr>`;
+        }).join('')||nr(7,'لا توجد بيانات لهذا الشهر')}
+        </tbody>
+      </table>
+      ${Object.keys(map).length>0?`
+      <div style="padding:14px 16px;border-top:2px solid var(--border);display:flex;gap:20px;flex-wrap:wrap;background:#f8fafc">
+        <div style="font-size:12.5px"><span style="color:var(--muted)">إجمالي الإيرادات:</span> <strong style="color:var(--success)">${fmt(Object.values(map).reduce((s,d)=>s+d.income,0))}</strong></div>
+        <div style="font-size:12.5px"><span style="color:var(--muted)">إجمالي حصص الأطباء:</span> <strong style="color:var(--teal)">${fmt(Object.entries(map).reduce((s,[dr,d])=>s+Math.round(d.income*getDrPct(dr)/100),0))}</strong></div>
+        <div style="font-size:12.5px"><span style="color:var(--muted)">صافي المركز:</span> <strong style="color:var(--navy)">${fmt(Object.entries(map).reduce((s,[dr,d])=>s+(d.income-Math.round(d.income*getDrPct(dr)/100)),0))}</strong></div>
+      </div>`:''}
+    </div>
+
+    ${Object.keys(map).length>0?`
+    <div class="rc" style="margin-top:16px">
+      <h3>المقارنة البيانية</h3>
+      ${Object.entries(map).sort((a,b)=>b[1].income-a[1].income).map(([dr,d])=>{
+        const maxIncome=Math.max(...Object.values(map).map(x=>x.income));
+        const pct=getDrPct(dr);
+        return`<div class="metric-row">
+          <span style="font-size:12px;font-weight:700;min-width:100px">${esc(dr)}</span>
+          <div style="flex:1;margin:0 10px;height:10px;background:var(--border);border-radius:5px;overflow:hidden">
+            <div style="width:${maxIncome>0?Math.round(d.income/maxIncome*100):0}%;height:100%;background:var(--teal);border-radius:5px"></div>
+          </div>
+          <div style="text-align:left;min-width:120px">
+            <strong style="font-size:12px;color:var(--teal)">${fmt(d.income)}</strong>
+            <span style="font-size:10.5px;color:var(--muted);margin-right:6px">(${pct}% = ${fmt(Math.round(d.income*pct/100))})</span>
+          </div>
+        </div>`;}).join('')}
+    </div>`:''}`;
+}
+
+function saveDrPct(name,pct){
+  localStorage.setItem('dr_pct_'+name,Math.min(100,Math.max(0,Number(pct)||0)));
+}
+
+// ── Reports ───────────────────────────────────────────
+async function renderReports(){
+  const mo=RPT_MONTH+'-01',moEnd=RPT_MONTH+'-31';
+  const months=[];const d=new Date();for(let i=0;i<12;i++){const y=d.getFullYear(),m=String(d.getMonth()+1).padStart(2,'0');months.push(`${y}-${m}`);d.setMonth(d.getMonth()-1);}
+
+  const[{data:allPays},{data:moPays},{data:exps},{data:moExps},{count:totalPts},{count:newPts},{data:moPatients}]=await Promise.all([
+    sb.from('payments').select('paid_amount,patient_id'),
+    sb.from('payments').select('*').gte('date',mo).lte('date',moEnd),
+    sb.from('expenses').select('amount'),
+    sb.from('expenses').select('amount,is_marketing').gte('date',mo).lte('date',moEnd),
+    sb.from('patients').select('*',{count:'exact',head:true}),
+    sb.from('patients').select('*',{count:'exact',head:true}).gte('created_at',mo).lte('created_at',moEnd),
+    sb.from('patients').select('name,acquisition_source,source_page').gte('created_at',mo).lte('created_at',moEnd),
+  ]);
+  const income=(allPays||[]).reduce((s,p)=>s+(p.paid_amount||0),0);
+  const moIncome=(moPays||[]).reduce((s,p)=>s+(p.paid_amount||0),0);
+  const expTotal=(exps||[]).reduce((s,e)=>s+(e.amount||0),0);
+  const moExpTotal=(moExps||[]).reduce((s,e)=>s+(e.amount||0),0);
+  const mktMo=(moExps||[]).filter(e=>e.is_marketing).reduce((s,e)=>s+(e.amount||0),0);
+  const moProfit=moIncome-moExpTotal;
+  const uniquePay=[...new Set((allPays||[]).map(p=>p.patient_id))].length;
+  const ltv=uniquePay>0?Math.round(income/uniquePay):0;
+  const cac=(newPts||0)>0?Math.round(mktMo/(newPts||1)):0;
+  const ltvCac=cac>0?(ltv/cac).toFixed(1):'—';
+  const srcMap={};(moPatients||[]).forEach(p=>{const src=p.source_page||p.acquisition_source||'غير محدد';if(!srcMap[src])srcMap[src]=0;srcMap[src]++;});
+  const srcList=Object.entries(srcMap).sort((a,b)=>b[1]-a[1]);
+  const moPaidPts=[...new Set((moPays||[]).map(p=>p.patient_id))].length;
+
+  document.getElementById('pg-content').innerHTML=`
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:18px;flex-wrap:wrap">
+      <label style="font-size:13px;font-weight:700">📅 الشهر:</label>
+      <select style="padding:7px 11px;border:1.5px solid var(--border);border-radius:8px;font-family:'Cairo',sans-serif;font-size:12.5px;outline:none" onchange="RPT_MONTH=this.value;renderReports()">
+        ${months.map(m=>`<option value="${m}" ${m===RPT_MONTH?'selected':''}>${m}</option>`).join('')}
+      </select>
+    </div>
+    <div class="cards">
+      <div class="card" style="border-right-color:var(--success)"><div class="lbl">💰 إيرادات الشهر</div><div class="val" style="font-size:15px;color:var(--success)">${fmt(moIncome)}</div><div class="sub">${(moPays||[]).length} دفعة</div></div>
+      <div class="card" style="border-right-color:var(--danger)"><div class="lbl">📊 مصاريف الشهر</div><div class="val" style="font-size:15px;color:var(--danger)">${fmt(moExpTotal)}</div></div>
+      <div class="card" style="border-right-color:${moProfit>=0?'var(--teal)':'var(--danger)'}"><div class="lbl">📈 صافي الشهر</div><div class="val" style="font-size:15px;color:${moProfit>=0?'var(--teal)':'var(--danger)'}">${fmt(moProfit)}</div></div>
+      <div class="card"><div class="lbl">👥 مرضى جدد</div><div class="val">${newPts||0}</div></div>
+      <div class="card"><div class="lbl">💳 دفعوا الشهر</div><div class="val">${moPaidPts}</div></div>
+      <div class="card" style="border-right-color:var(--warning)"><div class="lbl">🎯 CAC</div><div class="val" style="font-size:15px">${fmt(cac)}</div></div>
+    </div>
+    <div class="report-grid">
+      <div class="rc">
+        <h3>📣 مصادر المرضى الجدد — ${RPT_MONTH}</h3>
+        ${srcList.length>0?srcList.map(([src,cnt])=>`<div class="metric-row">
+          <span style="font-size:12px;font-weight:600">${esc(src)}</span>
+          <div style="display:flex;align-items:center;gap:7px">
+            <div style="width:80px;height:7px;background:var(--border);border-radius:4px"><div style="width:${Math.round(cnt/(newPts||1)*100)}%;height:100%;background:var(--teal);border-radius:4px"></div></div>
+            <strong>${cnt}</strong><span style="color:var(--muted);font-size:10.5px">${Math.round(cnt/(newPts||1)*100)}%</span>
+          </div>
+        </div>`).join(''):`<div style="text-align:center;color:var(--muted);padding:18px;font-size:12px">لا مرضى جدد</div>`}
+      </div>
+      <div class="rc">
+        <h3>💳 المدفوعات — ${RPT_MONTH}</h3>
+        <div style="max-height:280px;overflow-y:auto">
+          ${(moPays||[]).length>0?`<table style="width:100%;border-collapse:collapse">
+            <thead><tr>${['المريض','الخدمة','المدفوع'].map(h=>`<th style="text-align:right;padding:5px 8px;font-size:10px;color:var(--muted);border-bottom:1px solid var(--border)">${h}</th>`).join('')}</tr></thead>
+            <tbody>${(moPays||[]).map(p=>`<tr style="border-bottom:1px solid #f1f5f9"><td style="padding:5px 8px;font-size:11.5px;font-weight:600">${esc(p.patient_name||'—')}</td><td style="padding:5px 8px;font-size:10.5px;color:var(--muted)">${esc(p.service||'—')}</td><td style="padding:5px 8px;font-size:11.5px;color:var(--success);font-weight:700">${fmt(p.paid_amount)}</td></tr>`).join('')}</tbody>
+          </table>`:`<div style="text-align:center;color:var(--muted);padding:18px;font-size:12px">لا مدفوعات</div>`}
+        </div>
+      </div>
+      <div class="rc">
+        <h3>🎯 CAC و LTV</h3>
+        <div class="big-n">${fmt(cac)}</div><div class="big-l">تكلفة اكتساب مريض</div>
+        <div class="formula">تسويق ÷ مرضى جدد<br>${fmt(mktMo)} ÷ ${newPts||0} = ${fmt(cac)}</div>
+        <div class="metric-row" style="margin-top:12px"><span style="color:var(--muted);font-size:12px">LTV متوسط المريض</span><strong style="color:var(--teal)">${fmt(ltv)}</strong></div>
+        <div class="metric-row"><span style="color:var(--muted);font-size:12px">نسبة LTV/CAC</span><strong style="color:${Number(ltvCac)>=3?'var(--success)':'var(--danger)'}">${ltvCac}x</strong></div>
+      </div>
+      <div class="rc">
+        <h3>📈 الملخص الكلي</h3>
+        <div class="metric-row"><span style="color:var(--muted);font-size:12px">إجمالي المرضى</span><strong>${totalPts||0}</strong></div>
+        <div class="metric-row"><span style="color:var(--muted);font-size:12px">إجمالي الإيرادات</span><strong style="color:var(--success)">${fmt(income)}</strong></div>
+        <div class="metric-row"><span style="color:var(--muted);font-size:12px">إجمالي المصاريف</span><strong style="color:var(--danger)">${fmt(expTotal)}</strong></div>
+        <div class="metric-row"><span style="color:var(--muted);font-size:12px">صافي الكلي</span><strong style="color:${income-expTotal>=0?'var(--teal)':'var(--danger)'}">${fmt(income-expTotal)}</strong></div>
+      </div>
+    </div>`;
+}
+
+// ── Modal ─────────────────────────────────────────────
+function modal(title,body){
+  document.getElementById('modal-root').innerHTML=`
+    <div class="modal-overlay" onclick="closeModal()">
+      <div class="modal" onclick="event.stopPropagation()">
+        <div class="modal-ttl"><h3>${title}</h3><button class="btn btn-outline btn-sm" onclick="closeModal()">✕</button></div>
+        ${body}
+      </div>
+    </div>`;
+}
+function closeModal(){document.getElementById('modal-root').innerHTML='';}
+
+init();
+</script>
+</body>
+</html>
