@@ -1128,6 +1128,8 @@ async function saveCollectRemaining(payId,patientId,oldRemaining){
   await sb.from('payments').update({paid_amount:newPaid,remaining:newRemaining}).eq('id',payId);
   closeModal();openPatient(patientId);
 }
+
+async function modalEditPayment(payId,patientId){
   const{data:pay}=await sb.from('payments').select('*').eq('id',payId).single();if(!pay)return;
   modal('تعديل الدفعة',`
     <div class="form-group"><label>الخدمة *</label><input id="ep-svc" value="${esc(pay.service||'')}"></div>
