@@ -629,7 +629,7 @@ async function openPatient(id){
             <td style="color:var(--success);font-weight:700">${fmt(x.paid_amount)}</td>
             <td>${x.remaining>0?`<span style="color:var(--danger);font-weight:700">${fmt(x.remaining)}</span>`:'<span class="badge bg">✓</span>'}</td>
             ${ROLE==='admin'?`<td style="white-space:nowrap"><button class="btn btn-outline btn-sm" onclick="modalEditPayment('${x.id}','${id}')">✏</button> <button class="btn btn-danger btn-sm" onclick="deletePayment('${x.id}','${id}')">🗑</button></td>`:''}
-            ${ROLE==='reception'&&x.remaining>0?`<td><button class="btn btn-success btn-sm" onclick="modalCollectRemaining('${x.id}','${id}','${x.remaining}','${esc(x.service||'')}')">تحصيل ${fmt(x.remaining)}</button></td>`:ROLE==='reception'?'<td>—</td>':''}
+            ${ROLE==='reception'&&x.remaining>0?'<td><button class="btn btn-success btn-sm" onclick="modalCollectRemaining(\''+x.id+'\',\''+id+'\','+x.remaining+',\''+esc(x.service||'')+'\')">تحصيل</button></td>':ROLE==='reception'?'<td>—</td>':''}
           </tr>`).join('')||nr(ROLE==='admin'?7:ROLE==='reception'?7:6,'لا توجد مدفوعات')}</tbody></table>
         </div>
         <div class="tbl-wrap">
