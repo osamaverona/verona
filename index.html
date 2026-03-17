@@ -539,6 +539,28 @@ async function openPatient(id){
         <div class="legend-item"><div class="legend-dot" style="border-color:var(--danger);background:#dc2626"></div>مخلوع</div>
         <div class="legend-item"><div class="legend-dot" style="border-color:#8b5cf6;background:#8b5cf6"></div>زراعة</div>
       </div>
+
+      <!-- الأسنان اللبنية -->
+      <div style="margin-top:14px;border-top:1px dashed var(--border);padding-top:14px">
+        <div style="font-size:10px;font-weight:800;color:#e879f9;text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;text-align:center">🍼 الأسنان اللبنية</div>
+        <div class="teeth-grid">
+          <div style="font-size:9.5px;color:var(--muted);font-weight:700">الفك العلوي</div>
+          <div class="teeth-row">
+            ${[[55,'ه'],[54,'د'],[53,'ج'],[52,'ب'],[51,'أ']].map(([n,ar])=>`<button class="tooth-btn ${tCls(n)}" onclick="openToothModal('${id}','${n}','${esc(p.name)}')" title="سن ${ar} علوي أيمن"><span style="font-size:9px">${ar}</span><span style="font-size:9px">${tIco(n)}</span></button>`).join('')}
+            <div class="teeth-divider"></div>
+            ${[[61,'أ'],[62,'ب'],[63,'ج'],[64,'د'],[65,'ه']].map(([n,ar])=>`<button class="tooth-btn ${tCls(n)}" onclick="openToothModal('${id}','${n}','${esc(p.name)}')" title="سن ${ar} علوي أيسر"><span style="font-size:9px">${ar}</span><span style="font-size:9px">${tIco(n)}</span></button>`).join('')}
+          </div>
+          <div style="height:5px"></div>
+          <div class="teeth-row">
+            ${[[85,'ه'],[84,'د'],[83,'ج'],[82,'ب'],[81,'أ']].map(([n,ar])=>`<button class="tooth-btn ${tCls(n)}" onclick="openToothModal('${id}','${n}','${esc(p.name)}')" title="سن ${ar} سفلي أيمن"><span style="font-size:9px">${ar}</span><span style="font-size:9px">${tIco(n)}</span></button>`).join('')}
+            <div class="teeth-divider"></div>
+            ${[[71,'أ'],[72,'ب'],[73,'ج'],[74,'د'],[75,'ه']].map(([n,ar])=>`<button class="tooth-btn ${tCls(n)}" onclick="openToothModal('${id}','${n}','${esc(p.name)}')" title="سن ${ar} سفلي أيسر"><span style="font-size:9px">${ar}</span><span style="font-size:9px">${tIco(n)}</span></button>`).join('')}
+          </div>
+          <div style="font-size:9.5px;color:var(--muted);font-weight:700">الفك السفلي</div>
+        </div>
+        <div style="text-align:center;font-size:9.5px;color:var(--muted);margin-top:8px">أ=رباعي · ب=ناب · ج=ضاحك أول · د=ضاحك ثاني · ه=ضاحك ثالث</div>
+      </div>
+
       ${(teeth||[]).length>0?`<div style="margin-top:12px;overflow-x:auto">
         <table style="width:100%;border-collapse:collapse;min-width:380px">
           <thead><tr style="background:#f8fafc">${['السن','العلاج','الحالة','التكلفة','الطبيب'].map(h=>`<th style="text-align:right;padding:7px 10px;font-size:10px;color:var(--muted);border-bottom:1px solid var(--border)">${h}</th>`).join('')}</tr></thead>
