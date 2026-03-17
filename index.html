@@ -311,9 +311,27 @@ async function renderPage(page){
 function setupRT(){
   if(RT)sb.removeChannel(RT);
   RT=sb.channel('vrt')
-    .on('postgres_changes',{event:'*',schema:'public',table:'payments'},()=>{if(['payments','dashboard','debts'].includes(CUR))renderPage(CUR);})
+    .on('postgres_changes',{event:'INSERT',schema:'public',table:'payments'},(payload)=>{
+      if(['payments','dashboard','debts'].includes(CUR))renderPage(CUR);
+      // إشعار للاستقبال عند تسجيل دفعة جديدة
+      if(ROLE==='reception'){
+        const p=payload.new;
+        showNotification(`💰 دفعة جديدة — ${p.patient_name||'مريض'} — ${(p.paid_amount||0).toLocaleString('ar-IQ')} د.ع — ${p.doctor_name||'—'}`);
+      }
+    })
+    .on('postgres_changes',{event:'UPDATE',schema:'public',table:'payments'},()=>{if(['payments','dashboard','debts'].includes(CUR))renderPage(CUR);})
     .on('postgres_changes',{event:'*',schema:'public',table:'appointments'},()=>{if(['appts','dashboard'].includes(CUR))renderPage(CUR);})
     .subscribe();
+}
+
+function showNotification(msg){
+  const el=document.createElement('div');
+  el.style.cssText='position:fixed;top:70px;left:50%;transform:translateX(-50%);background:#0d9488;color:#fff;padding:12px 22px;border-radius:12px;font-size:13px;font-weight:700;z-index:9999;box-shadow:0 8px 24px rgba(0,0,0,.3);font-family:Cairo,sans-serif;direction:rtl;animation:slideDown .3s ease';
+  el.textContent=msg;
+  document.body.appendChild(el);
+  // صوت تنبيه
+  try{const ctx=new AudioContext();const o=ctx.createOscillator();const g=ctx.createGain();o.connect(g);g.connect(ctx.destination);o.frequency.value=880;g.gain.setValueAtTime(0.3,ctx.currentTime);g.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+0.4);o.start();o.stop(ctx.currentTime+0.4);}catch(e){}
+  setTimeout(()=>el.remove(),4000);
 }
 function nr(c=4,m='لا توجد بيانات'){return `<tr><td colspan="${c}" style="text-align:center;color:var(--muted);padding:26px;font-size:12px">${m}</td></tr>`}
 
@@ -1080,7 +1098,9 @@ async function savePay(fixId,fixName){
   if(!pid){const pv=v('pay-p');if(!pv){alert('اختر مريضاً');return;}[pid,pname]=pv.split('|');}
   const total=Number(v('pay-total')||0),paid=Number(v('pay-paid')||0),remaining=Math.max(0,total-paid);
   const service=v('pay-s').trim();if(!service){alert('أدخل الخدمة');return;}
-  await sb.from('payments').insert({patient_id:pid,patient_name:pname,service,total_amount:total,paid_amount:paid,remaining,date:v('pay-date'),doctor_name:v('pay-dr').trim(),tooth_number:v('pay-tooth')||null,notes:v('pay-n').trim(),recorded_by:USER?.email});
+  // اسم الطبيب — من حقل النموذج أو من بيانات المستخدم الحالي
+  const drName=document.getElementById('pay-dr')?.value?.trim()||USER?.user_metadata?.name||'';
+  await sb.from('payments').insert({patient_id:pid,patient_name:pname,service,total_amount:total,paid_amount:paid,remaining,date:v('pay-date'),doctor_name:drName,tooth_number:v('pay-tooth')||null,notes:v('pay-n').trim(),recorded_by:USER?.email});
   closeModal();renderPage(CUR);
 }
 
