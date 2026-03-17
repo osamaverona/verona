@@ -621,7 +621,7 @@ async function openPatient(id){
       <div>
         <div class="tbl-wrap">
           <div class="tbl-hdr"><h3>سجل المدفوعات</h3></div>
-          <table><thead><tr><th>التاريخ</th><th>الخدمة</th><th>السن</th><th>الكلي</th><th>المدفوع</th><th>المتبقي</th>${ROLE==='admin'?'<th></th>':''}</tr></thead>
+          <table><thead><tr><th>التاريخ</th><th>الخدمة</th><th>السن</th><th>الكلي</th><th>المدفوع</th><th>المتبقي</th>${ROLE==='admin'?'<th></th>':ROLE==='reception'?'<th>تحصيل</th>':''}</tr></thead>
           <tbody>${(pays||[]).map(x=>`<tr>
             <td>${x.date}</td><td>${esc(x.service||'—')}</td>
             <td>${x.tooth_number?`<span class="badge bb">#${x.tooth_number}</span>`:'—'}</td>
@@ -629,7 +629,8 @@ async function openPatient(id){
             <td style="color:var(--success);font-weight:700">${fmt(x.paid_amount)}</td>
             <td>${x.remaining>0?`<span style="color:var(--danger);font-weight:700">${fmt(x.remaining)}</span>`:'<span class="badge bg">✓</span>'}</td>
             ${ROLE==='admin'?`<td style="white-space:nowrap"><button class="btn btn-outline btn-sm" onclick="modalEditPayment('${x.id}','${id}')">✏</button> <button class="btn btn-danger btn-sm" onclick="deletePayment('${x.id}','${id}')">🗑</button></td>`:''}
-          </tr>`).join('')||nr(ROLE==='admin'?7:6,'لا توجد مدفوعات')}</tbody></table>
+            ${ROLE==='reception'&&x.remaining>0?`<td><button class="btn btn-success btn-sm" onclick="modalCollectRemaining('${x.id}','${id}','${x.remaining}','${esc(x.service||'')}')">تحصيل ${fmt(x.remaining)}</button></td>`:ROLE==='reception'?'<td>—</td>':''}
+          </tr>`).join('')||nr(ROLE==='admin'?7:ROLE==='reception'?7:6,'لا توجد مدفوعات')}</tbody></table>
         </div>
         <div class="tbl-wrap">
           <div class="tbl-hdr"><h3>المواعيد</h3></div>
@@ -1104,7 +1105,29 @@ async function savePay(fixId,fixName){
   closeModal();renderPage(CUR);
 }
 
-async function modalEditPayment(payId,patientId){
+function modalCollectRemaining(payId,patientId,remaining,service){
+  modal(`تحصيل المتبقي — ${service}`,`
+    <div class="alert a-warn">المبلغ المتبقي: <strong>${fmt(Number(remaining))}</strong></div>
+    <div class="form-group"><label>المبلغ المحصّل (د.ع)</label>
+      <input id="cr-amount" type="number" value="${remaining}" max="${remaining}" style="font-size:16px;font-weight:700;color:var(--teal)">
+    </div>
+    <div class="form-group"><label>التاريخ</label><input id="cr-date" type="date" value="${todayStr()}"></div>
+    <div class="form-actions">
+      <button class="btn btn-outline" onclick="closeModal()">إلغاء</button>
+      <button class="btn btn-success" onclick="saveCollectRemaining('${payId}','${patientId}','${remaining}')">✓ تأكيد التحصيل</button>
+    </div>`);
+}
+
+async function saveCollectRemaining(payId,patientId,oldRemaining){
+  const collected=Number(v('cr-amount')||0);
+  if(!collected||collected<=0){alert('أدخل المبلغ');return;}
+  const{data:pay}=await sb.from('payments').select('paid_amount,remaining').eq('id',payId).single();
+  if(!pay)return;
+  const newPaid=(pay.paid_amount||0)+collected;
+  const newRemaining=Math.max(0,(pay.remaining||0)-collected);
+  await sb.from('payments').update({paid_amount:newPaid,remaining:newRemaining}).eq('id',payId);
+  closeModal();openPatient(patientId);
+}
   const{data:pay}=await sb.from('payments').select('*').eq('id',payId).single();if(!pay)return;
   modal('تعديل الدفعة',`
     <div class="form-group"><label>الخدمة *</label><input id="ep-svc" value="${esc(pay.service||'')}"></div>
