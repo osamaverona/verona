@@ -546,19 +546,19 @@ async function openPatient(id){
         <div class="teeth-grid">
           <div style="font-size:9.5px;color:var(--muted);font-weight:700">الفك العلوي</div>
           <div class="teeth-row">
-            ${[[55,'ه'],[54,'د'],[53,'ج'],[52,'ب'],[51,'أ']].map(([n,ar])=>`<button class="tooth-btn ${tCls(n)}" onclick="openToothModal('${id}','${n}','${esc(p.name)}')" title="سن ${ar} علوي أيمن"><span style="font-size:9px">${ar}</span><span style="font-size:9px">${tIco(n)}</span></button>`).join('')}
+            ${[[55,'E'],[54,'D'],[53,'C'],[52,'B'],[51,'A']].map(([n,ar])=>`<button class="tooth-btn ${tCls(n)}" onclick="openToothModal('${id}','${n}','${esc(p.name)}')" title="سن ${ar} علوي أيمن"><span style="font-size:9px">${ar}</span><span style="font-size:9px">${tIco(n)}</span></button>`).join('')}
             <div class="teeth-divider"></div>
-            ${[[61,'أ'],[62,'ب'],[63,'ج'],[64,'د'],[65,'ه']].map(([n,ar])=>`<button class="tooth-btn ${tCls(n)}" onclick="openToothModal('${id}','${n}','${esc(p.name)}')" title="سن ${ar} علوي أيسر"><span style="font-size:9px">${ar}</span><span style="font-size:9px">${tIco(n)}</span></button>`).join('')}
+            ${[[61,'A'],[62,'B'],[63,'C'],[64,'D'],[65,'E']].map(([n,ar])=>`<button class="tooth-btn ${tCls(n)}" onclick="openToothModal('${id}','${n}','${esc(p.name)}')" title="سن ${ar} علوي أيسر"><span style="font-size:9px">${ar}</span><span style="font-size:9px">${tIco(n)}</span></button>`).join('')}
           </div>
           <div style="height:5px"></div>
           <div class="teeth-row">
-            ${[[85,'ه'],[84,'د'],[83,'ج'],[82,'ب'],[81,'أ']].map(([n,ar])=>`<button class="tooth-btn ${tCls(n)}" onclick="openToothModal('${id}','${n}','${esc(p.name)}')" title="سن ${ar} سفلي أيمن"><span style="font-size:9px">${ar}</span><span style="font-size:9px">${tIco(n)}</span></button>`).join('')}
+            ${[[85,'E'],[84,'D'],[83,'C'],[82,'B'],[81,'A']].map(([n,ar])=>`<button class="tooth-btn ${tCls(n)}" onclick="openToothModal('${id}','${n}','${esc(p.name)}')" title="سن ${ar} سفلي أيمن"><span style="font-size:9px">${ar}</span><span style="font-size:9px">${tIco(n)}</span></button>`).join('')}
             <div class="teeth-divider"></div>
-            ${[[71,'أ'],[72,'ب'],[73,'ج'],[74,'د'],[75,'ه']].map(([n,ar])=>`<button class="tooth-btn ${tCls(n)}" onclick="openToothModal('${id}','${n}','${esc(p.name)}')" title="سن ${ar} سفلي أيسر"><span style="font-size:9px">${ar}</span><span style="font-size:9px">${tIco(n)}</span></button>`).join('')}
+            ${[[71,'A'],[72,'B'],[73,'C'],[74,'D'],[75,'E']].map(([n,ar])=>`<button class="tooth-btn ${tCls(n)}" onclick="openToothModal('${id}','${n}','${esc(p.name)}')" title="سن ${ar} سفلي أيسر"><span style="font-size:9px">${ar}</span><span style="font-size:9px">${tIco(n)}</span></button>`).join('')}
           </div>
           <div style="font-size:9.5px;color:var(--muted);font-weight:700">الفك السفلي</div>
         </div>
-        <div style="text-align:center;font-size:9.5px;color:var(--muted);margin-top:8px">أ=رباعي · ب=ناب · ج=ضاحك أول · د=ضاحك ثاني · ه=ضاحك ثالث</div>
+        <div style="text-align:center;font-size:9.5px;color:var(--muted);margin-top:8px">A=Central · B=Lateral · C=Canine · D=1st Molar · E=2nd Molar</div>
       </div>
 
       ${(teeth||[]).length>0?`<div style="margin-top:12px;overflow-x:auto">
