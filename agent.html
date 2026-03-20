@@ -1,0 +1,824 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>فيرونا AI — المساعد الذكي</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; overflow: hidden; }
+  body {
+    font-family: 'Segoe UI', Tahoma, Arial, sans-serif;
+    background: #080e1a;
+    color: #e2e8f0;
+    direction: rtl;
+  }
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: rgba(0,188,212,.2); border-radius: 2px; }
+  input, textarea, button { font-family: inherit; }
+  input::placeholder, textarea::placeholder { color: rgba(255,255,255,.22); }
+
+  /* ── LOGIN ── */
+  #login-screen {
+    min-height: 100vh;
+    display: flex; align-items: center; justify-content: center;
+    background: linear-gradient(135deg,#060d1a,#0b1525,#070f1c);
+    position: relative;
+  }
+  #login-screen::before {
+    content: '';
+    position: fixed; inset: 0; pointer-events: none;
+    background:
+      radial-gradient(ellipse at 30% 60%, rgba(0,188,212,.07) 0%, transparent 60%),
+      radial-gradient(ellipse at 75% 30%, rgba(6,95,155,.05) 0%, transparent 55%);
+  }
+  .login-box {
+    background: rgba(255,255,255,.025);
+    backdrop-filter: blur(24px);
+    border: 1px solid rgba(0,188,212,.18);
+    border-radius: 28px;
+    padding: 52px 44px;
+    width: 100%; max-width: 420px;
+    box-shadow: 0 30px 60px rgba(0,0,0,.6);
+    position: relative; z-index: 1;
+  }
+  .login-logo {
+    width: 68px; height: 68px;
+    background: linear-gradient(135deg,#00bcd4,#007ea7);
+    border-radius: 20px;
+    display: inline-flex; align-items: center; justify-content: center;
+    font-size: 30px; margin-bottom: 18px;
+    box-shadow: 0 10px 30px rgba(0,188,212,.35);
+  }
+  .login-box h1 { color: #fff; font-size: 26px; font-weight: 800; margin-bottom: 6px; }
+  .login-box p  { color: rgba(255,255,255,.35); font-size: 14px; margin-bottom: 36px; }
+  .input-field {
+    width: 100%; padding: 13px 16px;
+    background: rgba(255,255,255,.04);
+    border: 1px solid rgba(255,255,255,.1);
+    border-radius: 12px; color: #fff; font-size: 15px;
+    outline: none; text-align: right;
+    transition: border-color .2s;
+    margin-bottom: 12px; display: block;
+  }
+  .input-field:focus { border-color: rgba(0,188,212,.45); }
+  .btn-login {
+    width: 100%; padding: 15px;
+    background: linear-gradient(135deg,#00bcd4,#007ea7);
+    border: none; border-radius: 13px;
+    color: #fff; font-size: 16px; font-weight: 700;
+    cursor: pointer; margin-top: 6px;
+    box-shadow: 0 6px 20px rgba(0,188,212,.3);
+    transition: opacity .2s;
+  }
+  .btn-login:hover { opacity: .9; }
+  .login-error { color: #f87171; font-size: 13px; text-align: center; margin-bottom: 10px; }
+
+  /* ── APP SHELL ── */
+  #app { display: none; flex-direction: column; height: 100vh; }
+
+  /* HEADER */
+  .header {
+    padding: 11px 18px;
+    border-bottom: 1px solid rgba(255,255,255,.06);
+    background: rgba(5,10,20,.95);
+    backdrop-filter: blur(10px);
+    display: flex; align-items: center; justify-content: space-between;
+    flex-shrink: 0; z-index: 10;
+  }
+  .header-brand { display: flex; align-items: center; gap: 10px; }
+  .header-icon {
+    width: 34px; height: 34px;
+    background: linear-gradient(135deg,#00bcd4,#007ea7);
+    border-radius: 9px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px; box-shadow: 0 4px 12px rgba(0,188,212,.25);
+  }
+  .header-title { color: #fff; font-weight: 700; font-size: 14px; }
+  .header-sub   { color: rgba(0,188,212,.7); font-size: 11px; }
+  .header-right { display: flex; align-items: center; gap: 8px; }
+  .btn-insights {
+    background: rgba(0,188,212,.15);
+    border: 1px solid rgba(0,188,212,.3);
+    border-radius: 8px; padding: 6px 12px;
+    color: #67e8f9; cursor: pointer; font-size: 12px;
+    transition: all .2s;
+  }
+  .btn-insights.off {
+    background: rgba(255,255,255,.04);
+    border-color: rgba(255,255,255,.08);
+    color: rgba(255,255,255,.4);
+  }
+  .user-name { color: #e2e8f0; font-size: 13px; font-weight: 600; }
+  .user-role {
+    font-size: 11px; padding: 2px 8px;
+    border-radius: 20px; display: inline-block;
+  }
+  .role-admin    { color: #fbbf24; background: rgba(251,191,36,.12); border: 1px solid rgba(251,191,36,.2); }
+  .role-doctor   { color: #22d3ee; background: rgba(34,211,238,.12); border: 1px solid rgba(34,211,238,.2); }
+  .role-reception{ color: #a78bfa; background: rgba(167,139,250,.12); border: 1px solid rgba(167,139,250,.2); }
+  .btn-logout {
+    background: rgba(255,255,255,.04);
+    border: 1px solid rgba(255,255,255,.08);
+    border-radius: 8px; padding: 6px 12px;
+    color: rgba(255,255,255,.4); cursor: pointer; font-size: 12px;
+    transition: all .15s;
+  }
+  .btn-logout:hover { background: rgba(255,255,255,.08); color: rgba(255,255,255,.7); }
+
+  /* BODY */
+  .body { flex: 1; display: flex; overflow: hidden; }
+
+  /* SIDEBAR */
+  .sidebar {
+    width: 255px;
+    border-left: 1px solid rgba(255,255,255,.05);
+    background: rgba(3,8,18,.65);
+    display: flex; flex-direction: column;
+    flex-shrink: 0; overflow-y: auto;
+    transition: width .3s;
+  }
+  .sidebar.hidden { width: 0; overflow: hidden; border: none; }
+  .sidebar-label {
+    padding: 13px 13px 6px;
+    color: rgba(255,255,255,.3);
+    font-size: 10px; font-weight: 700; letter-spacing: 1px;
+  }
+  .insight-card {
+    margin: 0 9px 7px;
+    padding: 11px 12px;
+    background: rgba(255,255,255,.025);
+    border: 1px solid rgba(255,255,255,.05);
+    border-radius: 11px; cursor: pointer;
+    transition: all .15s;
+  }
+  .insight-card:hover {
+    background: rgba(0,188,212,.07);
+    border-color: rgba(0,188,212,.15);
+  }
+  .insight-title { color: #e2e8f0; font-size: 11.5px; font-weight: 600; margin-bottom: 4px; }
+  .insight-body  { color: rgba(255,255,255,.38); font-size: 11px; line-height: 1.5; }
+  .qa-btn {
+    margin: 0 9px 5px;
+    padding: 8px 12px;
+    background: rgba(0,188,212,.05);
+    border: 1px solid rgba(0,188,212,.1);
+    border-radius: 9px; color: #67e8f9;
+    font-size: 12px; cursor: pointer; text-align: right;
+    width: calc(100% - 18px);
+    transition: background .15s;
+  }
+  .qa-btn:hover { background: rgba(0,188,212,.12); }
+
+  /* CHAT */
+  .chat-area { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+  .messages {
+    flex: 1; overflow-y: auto;
+    padding: 18px 16px;
+    display: flex; flex-direction: column; gap: 13px;
+  }
+  .msg-row { display: flex; align-items: flex-start; gap: 8px; }
+  .msg-row.user  { justify-content: flex-start; }
+  .msg-row.bot   { justify-content: flex-end; }
+  .msg-avatar {
+    width: 30px; height: 30px; border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px; flex-shrink: 0;
+  }
+  .msg-avatar.bot-av {
+    background: linear-gradient(135deg,#00bcd4,#007ea7);
+    box-shadow: 0 3px 10px rgba(0,188,212,.2);
+  }
+  .msg-avatar.user-av { background: rgba(255,255,255,.07); }
+  .msg-bubble {
+    max-width: 75%; padding: 11px 15px;
+    font-size: 13.5px; line-height: 1.75;
+    white-space: pre-wrap; word-break: break-word;
+  }
+  .msg-bubble.bot-bubble {
+    border-radius: 15px 4px 15px 15px;
+    background: linear-gradient(135deg,rgba(0,188,212,.1),rgba(0,120,160,.07));
+    border: 1px solid rgba(0,188,212,.14);
+    color: #dbeafe;
+  }
+  .msg-bubble.user-bubble {
+    border-radius: 4px 15px 15px 15px;
+    background: rgba(255,255,255,.07);
+    border: 1px solid rgba(255,255,255,.07);
+    color: #dbeafe;
+  }
+
+  /* TYPING */
+  .typing-row { display: flex; justify-content: flex-end; align-items: flex-start; gap: 8px; }
+  .typing-bubble {
+    padding: 12px 16px;
+    background: rgba(0,188,212,.08);
+    border: 1px solid rgba(0,188,212,.15);
+    border-radius: 15px 4px 15px 15px;
+    display: flex; gap: 5px; align-items: center;
+  }
+  .dot {
+    width: 7px; height: 7px;
+    background: #00bcd4; border-radius: 50%;
+    animation: pulse 1.2s ease-in-out infinite;
+  }
+  .dot:nth-child(2) { animation-delay: .2s; }
+  .dot:nth-child(3) { animation-delay: .4s; }
+  @keyframes pulse {
+    0%,100% { opacity: .3; transform: scale(.8); }
+    50%      { opacity: 1;  transform: scale(1.1); }
+  }
+
+  /* CHIPS */
+  .chips { display: flex; gap: 7px; flex-wrap: wrap; justify-content: center; margin: 10px 0 6px; }
+  .chip {
+    background: rgba(0,188,212,.07);
+    border: 1px solid rgba(0,188,212,.18);
+    border-radius: 20px; padding: 8px 16px;
+    color: #67e8f9; font-size: 12.5px; cursor: pointer;
+    transition: all .15s;
+  }
+  .chip:hover { background: rgba(0,188,212,.15); border-color: rgba(0,188,212,.35); }
+
+  /* INPUT BAR */
+  .input-bar {
+    padding: 11px 16px;
+    border-top: 1px solid rgba(255,255,255,.05);
+    background: rgba(5,10,20,.95);
+    display: flex; gap: 9px; align-items: flex-end; flex-shrink: 0;
+  }
+  #user-input {
+    flex: 1; padding: 11px 15px;
+    background: rgba(255,255,255,.04);
+    border: 1px solid rgba(255,255,255,.09);
+    border-radius: 12px; color: #e2e8f0;
+    font-size: 14px; outline: none;
+    resize: none; line-height: 1.5;
+    max-height: 120px; overflow-y: auto;
+    text-align: right;
+    transition: border-color .2s;
+  }
+  #user-input:focus { border-color: rgba(0,188,212,.35); }
+  #send-btn {
+    padding: 11px 17px;
+    background: linear-gradient(135deg,#00bcd4,#007ea7);
+    border: none; border-radius: 12px;
+    color: #fff; font-size: 18px; cursor: pointer;
+    box-shadow: 0 4px 16px rgba(0,188,212,.3);
+    flex-shrink: 0; transition: all .2s;
+  }
+  #send-btn:disabled {
+    background: rgba(0,188,212,.2);
+    color: rgba(255,255,255,.3);
+    cursor: not-allowed; box-shadow: none;
+  }
+
+  @media (max-width: 600px) {
+    .sidebar { width: 220px; }
+    .login-box { padding: 36px 24px; margin: 16px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ═══════════════ LOGIN ═══════════════ -->
+<div id="login-screen">
+  <div class="login-box">
+    <div style="text-align:center">
+      <div class="login-logo">🦷</div>
+      <h1>فيرونا AI</h1>
+      <p>المساعد الذكي للعيادة</p>
+    </div>
+    <input id="email-input"    class="input-field" type="email"    placeholder="البريد الإلكتروني" />
+    <input id="password-input" class="input-field" type="password" placeholder="كلمة المرور" />
+    <p id="login-error" class="login-error" style="display:none"></p>
+    <button class="btn-login" onclick="doLogin()">دخول</button>
+  </div>
+</div>
+
+<!-- ═══════════════ APP ═══════════════ -->
+<div id="app">
+  <!-- HEADER -->
+  <div class="header">
+    <div class="header-brand">
+      <div class="header-icon">🦷</div>
+      <div>
+        <div class="header-title">فيرونا AI</div>
+        <div class="header-sub">المساعد الذكي للعيادة</div>
+      </div>
+    </div>
+    <div class="header-right">
+      <button id="insights-toggle" class="btn-insights" onclick="toggleSidebar()" style="display:none">💡 تنبيهات</button>
+      <div>
+        <div id="hdr-name" class="user-name"></div>
+        <span id="hdr-role" class="user-role"></span>
+      </div>
+      <button class="btn-logout" onclick="doLogout()">خروج</button>
+    </div>
+  </div>
+
+  <!-- BODY -->
+  <div class="body">
+    <!-- SIDEBAR -->
+    <div id="sidebar" class="sidebar hidden">
+      <div class="sidebar-label">تنبيهات ذكية</div>
+      <div id="insights-list"><div style="padding:16px;text-align:center;color:rgba(255,255,255,.2);font-size:12px">جاري التحليل...</div></div>
+      <div class="sidebar-label" style="margin-top:10px">إجراءات سريعة</div>
+      <div id="qa-list"></div>
+      <div style="height:14px"></div>
+    </div>
+
+    <!-- CHAT -->
+    <div class="chat-area">
+      <div id="messages" class="messages"></div>
+      <div id="chips-row" class="chips" style="padding:0 16px 8px;display:none"></div>
+      <div class="input-bar">
+        <textarea id="user-input" rows="1"
+          placeholder='اكتب طلبك... مثال: "قسّط 500 ألف على 4 أشهر" أو "د. زيد غائب اليوم"'
+          onkeydown="handleKey(event)" oninput="autoResize(this)"></textarea>
+        <button id="send-btn" onclick="sendMessage()" disabled>↑</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ─── CONFIG ───────────────────────────────────────────────
+const SUPABASE_URL = "https://zhvawxibvzoeconuwsrm.supabase.co";
+const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpodmF3eGlidnpvZWNvbnV3c3JtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM1MTYwMTAsImV4cCI6MjA4OTA5MjAxMH0.q4nF5gP25I_JAzTeJjxG0bs59f8jhCwBD-iAz456mAo";
+const CLAUDE_URL   = "https://api.anthropic.com/v1/messages";
+
+const USERS = [
+  { email:"osaalhussein@gmail.com",    pass:"Verona2026",     name:"د. أسامة",  role:"admin"     },
+  { email:"zaidverona1@gmail.com",     pass:"zaidverona2026", name:"د. زيد",    role:"doctor"    },
+  { email:"mohammadverona86@gmail.com",pass:"Mohammad2026",   name:"د. محمد",   role:"doctor"    },
+  { email:"ghadaverona2@gmail.com",    pass:"ghadaverona2026",name:"د. غادة",   role:"doctor"    },
+  { email:"anasverona3@gmail.com",     pass:"Anas2026",       name:"د. أنس",    role:"doctor"    },
+  { email:"noorverona11@gmail.com",    pass:"noorverona2026", name:"د. نور",    role:"doctor"    },
+  { email:"verona1verona2@gmail.com",  pass:"verona2026",     name:"الاستقبال", role:"reception" },
+];
+
+const DOCTORS  = ["د. زيد","د. محمد","د. غادة","د. أنس","د. نور"];
+const DAYS_AR  = ["الأحد","الاثنين","الثلاثاء","الأربعاء","الخميس","الجمعة","السبت"];
+
+const NOW       = new Date();
+const today     = NOW.toISOString().split("T")[0];
+const yesterday = new Date(+NOW-86400000).toISOString().split("T")[0];
+const weekAgo   = new Date(+NOW-7*86400000).toISOString().split("T")[0];
+const monthStart= today.slice(0,7)+"-01";
+const lastMonthStart = (() => { const d=new Date(today); d.setMonth(d.getMonth()-1); d.setDate(1); return d.toISOString().split("T")[0]; })();
+const lastMonthEnd   = (() => { const d=new Date(today); d.setDate(0); return d.toISOString().split("T")[0]; })();
+
+const QUICK = {
+  admin:[
+    {label:"📋 إحاطة صباحية",  msg:"أعطني الإحاطة الصباحية"},
+    {label:"📊 ملخص اليوم",    msg:"ملخص اليوم"},
+    {label:"📅 مواعيد اليوم",  msg:"مواعيد اليوم"},
+    {label:"📈 تقرير الأسبوع", msg:"تقرير الأسبوع"},
+    {label:"💰 التقرير المالي",msg:"التقرير المالي الشهري"},
+    {label:"⚠️ الديون",        msg:"قائمة الديون"},
+    {label:"❌ الغيابات",      msg:"الغيابات هذا الأسبوع"},
+    {label:"🔄 متابعة مرضى",  msg:"مرضى بحاجة متابعة"},
+  ],
+  doctor:[
+    {label:"📅 مواعيدي اليوم",msg:"مواعيدي اليوم"},
+    {label:"🔍 بحث مريض",     msg:"ابحث عن مريض "},
+  ],
+  reception:[
+    {label:"📅 مواعيد اليوم",msg:"مواعيد اليوم"},
+    {label:"🔍 بحث مريض",    msg:"ابحث عن مريض "},
+  ],
+};
+
+const NON_ADMIN_BLOCKED = ["financial_report","debt_followup","no_show_report","weekly_report","daily_summary","redistribute_patients","installment_plan","follow_up_list","morning_briefing"];
+
+// ─── STATE ────────────────────────────────────────────────
+let currentUser = null;
+let isLoading   = false;
+let sidebarOpen = false;
+
+// ─── SUPABASE ─────────────────────────────────────────────
+async function sb(table, opts={}) {
+  const {select="*", filters={}, limit, order, method="GET", body} = opts;
+  let url = `${SUPABASE_URL}/rest/v1/${table}`;
+  const p = new URLSearchParams();
+  if (select) p.set("select", select);
+  Object.entries(filters).forEach(([k,v]) => p.set(k,v));
+  if (limit) p.set("limit", String(limit));
+  if (order) p.set("order", order);
+  const qs = p.toString();
+  if (qs) url += "?" + qs;
+  const headers = {
+    apikey: SUPABASE_KEY,
+    Authorization: `Bearer ${SUPABASE_KEY}`,
+    "Content-Type": "application/json",
+  };
+  if (method !== "GET") headers["Prefer"] = "return=representation";
+  const res = await fetch(url, {method, headers, body: body ? JSON.stringify(body) : undefined});
+  if (!res.ok) throw new Error(await res.text());
+  const t = await res.text();
+  return t ? JSON.parse(t) : null;
+}
+
+// ─── CLAUDE ───────────────────────────────────────────────
+async function claude(messages, system) {
+  const res = await fetch(CLAUDE_URL, {
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body: JSON.stringify({model:"claude-sonnet-4-20250514", max_tokens:1000, system, messages})
+  });
+  const data = await res.json();
+  return data.content?.[0]?.text || "حدث خطأ.";
+}
+
+// ─── DATA GATHERING ───────────────────────────────────────
+async function gatherData(intent, params) {
+  const role = currentUser.role;
+  const doctorName = currentUser.name;
+  try {
+    switch(intent) {
+      case "morning_briefing": {
+        const [todayA, debtors, todayPay, yestPay] = await Promise.all([
+          sb("appointments",{select:"id,time,status,doctor_name,patients(name,patient_number,balance)",filters:{date:`eq.${today}`},order:"time.asc"}).catch(()=>[]),
+          sb("patients",{select:"name,patient_number,balance",filters:{balance:"lt.0"},order:"balance.asc",limit:5}).catch(()=>[]),
+          sb("payments",{select:"amount",filters:{payment_date:`eq.${today}`}}).catch(()=>[]),
+          sb("payments",{select:"amount",filters:{payment_date:`eq.${yesterday}`}}).catch(()=>[]),
+        ]);
+        const confirmed = (todayA||[]).filter(a=>a.status==="confirmed").length;
+        const pending   = (todayA||[]).filter(a=>!a.status||a.status==="pending").length;
+        const debtToday = (todayA||[]).filter(a=>(a.patients?.balance||0)<0).map(a=>({name:a.patients?.name,balance:a.patients?.balance}));
+        const dc={}; DOCTORS.forEach(d=>dc[d]=0);
+        (todayA||[]).forEach(a=>{if(a.doctor_name)dc[a.doctor_name]=(dc[a.doctor_name]||0)+1;});
+        const idle=Object.entries(dc).filter(([,v])=>v===0).map(([d])=>d);
+        return {total:(todayA||[]).length, confirmed, pending, debt_patients_today:debtToday, idle_doctors:idle,
+          revenue_today:(todayPay||[]).reduce((s,p)=>s+(p.amount||0),0),
+          revenue_yesterday:(yestPay||[]).reduce((s,p)=>s+(p.amount||0),0),
+          top_debtors:debtors||[], date:today, day:DAYS_AR[new Date().getDay()]};
+      }
+      case "get_today_appointments": {
+        const filters={date:`eq.${today}`};
+        if(role==="doctor") filters.doctor_name=`eq.${doctorName}`;
+        if(params?.doctor) filters.doctor_name=`eq.${params.doctor}`;
+        const a=await sb("appointments",{select:"id,time,status,notes,doctor_name,patients(name,patient_number,phone,balance)",filters,order:"time.asc"});
+        return {type:"appointments",date:today,data:a||[]};
+      }
+      case "daily_summary": {
+        const [a,pay,newP,canc,weekPay]=await Promise.all([
+          sb("appointments",{filters:{date:`eq.${today}`},select:"id,status,doctor_name"}).catch(()=>[]),
+          sb("payments",{filters:{payment_date:`eq.${today}`},select:"amount,doctor_name"}).catch(()=>[]),
+          sb("patients",{filters:{created_at:`gte.${today}`},select:"id"}).catch(()=>[]),
+          sb("appointments",{filters:{date:`eq.${today}`,status:`eq.cancelled`},select:"id"}).catch(()=>[]),
+          sb("payments",{filters:{payment_date:`gte.${weekAgo}`},select:"amount"}).catch(()=>[]),
+        ]);
+        const totalToday=(pay||[]).reduce((s,p)=>s+(p.amount||0),0);
+        const avg=(weekPay||[]).reduce((s,p)=>s+(p.amount||0),0)/7;
+        const byDoc={};
+        (pay||[]).forEach(p=>{if(p.doctor_name)byDoc[p.doctor_name]=(byDoc[p.doctor_name]||0)+(p.amount||0);});
+        return {type:"daily_summary",revenue:totalToday,daily_avg:Math.round(avg),diff:Math.round(totalToday-avg),
+          total_appts:(a||[]).length,completed:(a||[]).filter(x=>x.status==="completed").length,
+          cancelled:(canc||[]).length,new_patients:(newP||[]).length,by_doctor:byDoc};
+      }
+      case "weekly_report": {
+        const [a,pay,exp]=await Promise.all([
+          sb("appointments",{filters:{date:`gte.${weekAgo}`},select:"date,status,doctor_name"}).catch(()=>[]),
+          sb("payments",{filters:{payment_date:`gte.${weekAgo}`},select:"amount,doctor_name"}).catch(()=>[]),
+          sb("expenses",{filters:{date:`gte.${weekAgo}`},select:"amount,category"}).catch(()=>[]),
+        ]);
+        const dStats={}; DOCTORS.forEach(d=>dStats[d]={appointments:0,revenue:0});
+        (a||[]).forEach(x=>{if(x.doctor_name)dStats[x.doctor_name].appointments++;});
+        (pay||[]).forEach(p=>{if(p.doctor_name)dStats[p.doctor_name].revenue+=(p.amount||0);});
+        const byDay={};
+        (a||[]).forEach(x=>{const d=DAYS_AR[new Date(x.date).getDay()];byDay[d]=(byDay[d]||0)+1;});
+        return {type:"weekly",revenue:(pay||[]).reduce((s,p)=>s+(p.amount||0),0),
+          expenses:(exp||[]).reduce((s,e)=>s+(e.amount||0),0),doctor_stats:dStats,by_day:byDay,total_appts:(a||[]).length};
+      }
+      case "financial_report": {
+        const [pay,exp,lastPay]=await Promise.all([
+          sb("payments",{filters:{payment_date:`gte.${monthStart}`},select:"amount,doctor_name,payment_date"}).catch(()=>[]),
+          sb("expenses",{filters:{date:`gte.${monthStart}`},select:"amount,category"}).catch(()=>[]),
+          sb("payments",{filters:{payment_date:`gte.${lastMonthStart}`},select:"amount,payment_date"}).catch(()=>[]),
+        ]);
+        const lastFiltered=(lastPay||[]).filter(p=>p.payment_date<=lastMonthEnd);
+        const totalIn=(pay||[]).reduce((s,p)=>s+(p.amount||0),0);
+        const totalOut=(exp||[]).reduce((s,e)=>s+(e.amount||0),0);
+        const lastIn=lastFiltered.reduce((s,p)=>s+(p.amount||0),0);
+        const byDoc={}; (pay||[]).forEach(p=>{if(p.doctor_name)byDoc[p.doctor_name]=(byDoc[p.doctor_name]||0)+(p.amount||0);});
+        const byCat={}; (exp||[]).forEach(e=>{if(e.category)byCat[e.category]=(byCat[e.category]||0)+(e.amount||0);});
+        return {type:"financial",month:today.slice(0,7),revenue:totalIn,expenses:totalOut,net:totalIn-totalOut,
+          last_month:lastIn,diff:Math.round(totalIn-lastIn),by_doctor:byDoc,by_category:byCat};
+      }
+      case "installment_plan": {
+        const amount=params?.amount||0, months=params?.months||3;
+        const monthly=Math.ceil(amount/months);
+        const plan=[]; const start=new Date();
+        for(let i=1;i<=months;i++){const d=new Date(start);d.setMonth(d.getMonth()+i);plan.push({installment:i,amount:monthly,due_date:d.toISOString().split("T")[0]});}
+        return {type:"installment",total:amount,months,monthly,plan};
+      }
+      case "debt_followup": {
+        const d=await sb("patients",{select:"name,patient_number,phone,balance",filters:{balance:"lt.0"},order:"balance.asc",limit:30}).catch(()=>[]);
+        return {type:"debts",count:(d||[]).length,total:(d||[]).reduce((s,x)=>s+Math.abs(x.balance||0),0),list:d||[]};
+      }
+      case "no_show_report": {
+        const c=await sb("appointments",{select:"patient_id,date,doctor_name,patients(name,patient_number,phone)",filters:{status:`eq.cancelled`,date:`gte.${weekAgo}`},order:"date.desc"}).catch(()=>[]);
+        const freq={};
+        (c||[]).forEach(a=>{const id=a.patient_id;if(!freq[id])freq[id]={count:0,info:a.patients};freq[id].count++;});
+        return {type:"no_show",total:(c||[]).length,repeat:Object.values(freq).filter(v=>v.count>1).sort((a,b)=>b.count-a.count)};
+      }
+      case "follow_up_list": {
+        const p=await sb("patients",{select:"name,patient_number,phone,balance",limit:20}).catch(()=>[]);
+        return {type:"follow_up",patients:p};
+      }
+      case "redistribute_patients": {
+        const absent=params?.doctor||"";
+        const a=await sb("appointments",{select:"id,time,patients(name,patient_number,phone)",filters:{date:`eq.${today}`,doctor_name:`eq.${absent}`},order:"time.asc"}).catch(()=>[]);
+        const available=DOCTORS.filter(d=>d!==absent);
+        return {type:"redistribute",absent,appointments:(a||[]).map((x,i)=>({...x,suggested:available[i%available.length]})),available};
+      }
+      case "search_patient": {
+        const q=params?.query||"";
+        const filters=/v-\d+/i.test(q)?{patient_number:`ilike.*${q}*`}:{name:`ilike.*${q}*`};
+        const data=await sb("patients",{select:"id,name,patient_number,phone,age,gender,balance",filters,limit:10});
+        return {type:"search",query:q,data:data||[]};
+      }
+      case "get_patient_details": {
+        const q=params?.query||"";
+        const filters=/v-\d+/i.test(q)?{patient_number:`eq.${q.toUpperCase()}`}:{name:`ilike.*${q}*`};
+        const res=await sb("patients",{select:"*",filters,limit:1});
+        const patient=res?.[0];
+        if(!patient) return {type:"not_found",query:q};
+        const [appts,treatments,payments]=await Promise.all([
+          sb("appointments",{filters:{patient_id:`eq.${patient.id}`},order:"date.desc",limit:8}).catch(()=>[]),
+          sb("treatment_plans",{filters:{patient_id:`eq.${patient.id}`},order:"created_at.desc",limit:6}).catch(()=>[]),
+          role==="admin"?sb("payments",{filters:{patient_id:`eq.${patient.id}`},order:"payment_date.desc",limit:5}).catch(()=>[]):Promise.resolve(null),
+        ]);
+        return {type:"patient_details",patient,appointments:appts,treatments,payments};
+      }
+      default: return null;
+    }
+  } catch(e) { return {error:e.message}; }
+}
+
+// ─── SYSTEM PROMPTS ───────────────────────────────────────
+function getSystem() {
+  if(currentUser.role==="admin")
+    return `أنت مساعد ذكي ومتخصص لعيادة فيرونا للأسنان في كركوك. تتحدث مع المدير ${currentUser.name}. صلاحية كاملة. عرض الأرقام بتنسيق واضح مع إجماليات ومقارنات. اقترح حلولاً عملية. كن مباشراً ومختصراً. أجب بالعربية.`;
+  if(currentUser.role==="doctor")
+    return `أنت مساعد لعيادة فيرونا. تتحدث مع ${currentUser.name}. صلاحياتك: مواعيد اليوم وملفات المرضى وإضافة ملاحظات فقط. محظور: أي معلومات مالية. أجب بالعربية.`;
+  return `أنت مساعد لعيادة فيرونا. صلاحياتك: مواعيد وبحث مرضى فقط. أجب بالعربية.`;
+}
+
+const INTENT_PROMPT = `أنت محلل نوايا لنظام عيادة أسنان. أعد JSON فقط.
+الأنواع: morning_briefing | get_today_appointments | daily_summary | weekly_report | financial_report | installment_plan | debt_followup | no_show_report | follow_up_list | redistribute_patients | search_patient | get_patient_details | general
+params: installment_plan:{amount,months} | redistribute_patients:{doctor} | search_patient/get_patient_details:{query}
+أمثلة:
+"ملخص اليوم"→{"intent":"daily_summary","params":{}}
+"قسّط مليون على 6 أشهر"→{"intent":"installment_plan","params":{"amount":1000000,"months":6}}
+"د. زيد غائب"→{"intent":"redistribute_patients","params":{"doctor":"د. زيد"}}
+"V-0050"→{"intent":"get_patient_details","params":{"query":"V-0050"}}
+"الغيابات"→{"intent":"no_show_report","params":{}}`;
+
+async function detectIntent(msg) {
+  const r = await claude([{role:"user",content:msg}], INTENT_PROMPT);
+  try { return JSON.parse(r.replace(/```json|```/g,"").trim()); }
+  catch { return {intent:"general",params:{}}; }
+}
+
+// ─── UI HELPERS ───────────────────────────────────────────
+function appendMsg(role, content) {
+  const msgs = document.getElementById("messages");
+  const row  = document.createElement("div");
+  row.className = `msg-row ${role==="user"?"user":"bot"}`;
+
+  const avatar = document.createElement("div");
+  avatar.className = `msg-avatar ${role==="user"?"user-av":"bot-av"}`;
+  avatar.textContent = role==="user"?"👤":"🦷";
+
+  const bubble = document.createElement("div");
+  bubble.className = `msg-bubble ${role==="user"?"user-bubble":"bot-bubble"}`;
+  bubble.textContent = content;
+
+  if(role==="user") { row.append(bubble, avatar); }
+  else              { row.append(avatar, bubble); }
+  msgs.appendChild(row);
+  msgs.scrollTop = msgs.scrollHeight;
+  return bubble;
+}
+
+function showTyping() {
+  const msgs = document.getElementById("messages");
+  const row  = document.createElement("div");
+  row.className = "typing-row"; row.id = "typing-indicator";
+  row.innerHTML = `<div class="msg-avatar bot-av">🦷</div><div class="typing-bubble"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>`;
+  msgs.appendChild(row);
+  msgs.scrollTop = msgs.scrollHeight;
+}
+function hideTyping() {
+  const t = document.getElementById("typing-indicator");
+  if(t) t.remove();
+}
+
+function setLoading(val) {
+  isLoading = val;
+  document.getElementById("send-btn").disabled = val || !document.getElementById("user-input").value.trim();
+  if(val) showTyping(); else hideTyping();
+}
+
+function autoResize(el) {
+  el.style.height = "auto";
+  el.style.height = Math.min(el.scrollHeight, 120) + "px";
+  document.getElementById("send-btn").disabled = isLoading || !el.value.trim();
+}
+
+function renderChips() {
+  const qas = QUICK[currentUser.role] || QUICK.reception;
+  const row  = document.getElementById("chips-row");
+  const msgs = document.getElementById("messages");
+  if(msgs.children.length > 1 || (currentUser.role==="admin" && sidebarOpen)) {
+    row.style.display="none"; return;
+  }
+  row.innerHTML = "";
+  qas.forEach(qa => {
+    const btn = document.createElement("button");
+    btn.className = "chip";
+    btn.textContent = qa.label;
+    btn.onclick = () => { document.getElementById("user-input").value = qa.msg; autoResize(document.getElementById("user-input")); sendMessage(); };
+    row.appendChild(btn);
+  });
+  row.style.display = "flex";
+}
+
+function buildSidebar(insights) {
+  const list = document.getElementById("insights-list");
+  list.innerHTML = "";
+  if(!insights || insights.length===0) {
+    list.innerHTML = `<div style="padding:16px;text-align:center;color:rgba(255,255,255,.2);font-size:12px">لا توجد تنبيهات</div>`;
+    return;
+  }
+  insights.forEach(ins => {
+    const card = document.createElement("div");
+    card.className = "insight-card";
+    card.innerHTML = `<div class="insight-title">${ins.icon} ${ins.title}</div><div class="insight-body">${ins.body}</div>`;
+    card.onclick = () => { document.getElementById("user-input").value = ins.title; autoResize(document.getElementById("user-input")); };
+    list.appendChild(card);
+  });
+  // Quick actions
+  const qaList = document.getElementById("qa-list");
+  qaList.innerHTML = "";
+  const qas = QUICK[currentUser.role] || QUICK.reception;
+  qas.forEach(qa => {
+    const btn = document.createElement("button");
+    btn.className = "qa-btn";
+    btn.textContent = qa.label;
+    btn.onclick = () => { document.getElementById("user-input").value = qa.msg; autoResize(document.getElementById("user-input")); };
+    qaList.appendChild(btn);
+  });
+}
+
+function toggleSidebar() {
+  sidebarOpen = !sidebarOpen;
+  const sb = document.getElementById("sidebar");
+  const btn = document.getElementById("insights-toggle");
+  if(sidebarOpen) { sb.classList.remove("hidden"); btn.classList.remove("off"); }
+  else            { sb.classList.add("hidden");    btn.classList.add("off");    }
+}
+
+// ─── LOGIN ────────────────────────────────────────────────
+document.getElementById("email-input").addEventListener("keydown", e => { if(e.key==="Enter") doLogin(); });
+document.getElementById("password-input").addEventListener("keydown", e => { if(e.key==="Enter") doLogin(); });
+
+async function doLogin() {
+  const email = document.getElementById("email-input").value.trim();
+  const pass  = document.getElementById("password-input").value;
+  const found = USERS.find(u => u.email===email && u.pass===pass);
+  if(!found) {
+    const err = document.getElementById("login-error");
+    err.textContent = "البريد الإلكتروني أو كلمة المرور غير صحيحة";
+    err.style.display = "block"; return;
+  }
+  currentUser = found;
+  document.getElementById("login-screen").style.display = "none";
+  const app = document.getElementById("app");
+  app.style.display = "flex";
+
+  document.getElementById("hdr-name").textContent = found.name;
+  const roleEl = document.getElementById("hdr-role");
+  roleEl.textContent = found.role==="admin"?"مدير":found.role==="doctor"?"طبيب":"استقبال";
+  roleEl.className = `user-role role-${found.role}`;
+
+  if(found.role==="admin") {
+    document.getElementById("insights-toggle").style.display = "flex";
+    sidebarOpen = true;
+    document.getElementById("sidebar").classList.remove("hidden");
+    loadMorningBriefing();
+    loadInsights();
+  } else {
+    const greet = found.role==="doctor"
+      ? `مرحباً ${found.name} — مواعيد اليوم وملفات المرضى جاهزة.`
+      : "مرحباً — يمكنني مساعدتك في المواعيد وبحث ملفات المرضى.";
+    appendMsg("bot", greet);
+    renderChips();
+  }
+}
+
+async function doLogout() {
+  currentUser = null; sidebarOpen = false; isLoading = false;
+  document.getElementById("app").style.display = "none";
+  document.getElementById("login-screen").style.display = "flex";
+  document.getElementById("messages").innerHTML = "";
+  document.getElementById("email-input").value = "";
+  document.getElementById("password-input").value = "";
+  document.getElementById("login-error").style.display = "none";
+  document.getElementById("user-input").value = "";
+  document.getElementById("insights-list").innerHTML = '<div style="padding:16px;text-align:center;color:rgba(255,255,255,.2);font-size:12px">جاري التحليل...</div>';
+  document.getElementById("sidebar").classList.add("hidden");
+  document.getElementById("insights-toggle").style.display = "none";
+  document.getElementById("chips-row").style.display = "none";
+}
+
+// ─── MORNING BRIEFING ─────────────────────────────────────
+async function loadMorningBriefing() {
+  setLoading(true);
+  try {
+    const data = await gatherData("morning_briefing", {});
+    const text = await claude(
+      [{role:"user",content:`بيانات اليوم:\n${JSON.stringify(data,null,2)}\n\nأعطني إحاطة صباحية مختصرة ومنظمة: ① ملخص سريع ② تنبيهات مهمة ③ توصية واحدة لليوم.`}],
+      getSystem()
+    );
+    appendMsg("bot", `📋 الإحاطة الصباحية — ${DAYS_AR[new Date().getDay()]}\n\n${text}`);
+  } catch {
+    appendMsg("bot", "مرحباً د. أسامة — اكتب أي سؤال وسأجيب فوراً.");
+  } finally { setLoading(false); renderChips(); }
+}
+
+// ─── INSIGHTS ─────────────────────────────────────────────
+async function loadInsights() {
+  try {
+    const [appts7,todayA,expenses,lastExp,payments,lastPay,cancelled] = await Promise.all([
+      sb("appointments",{filters:{date:`gte.${weekAgo}`},select:"date,status,doctor_name"}).catch(()=>[]),
+      sb("appointments",{filters:{date:`eq.${today}`},select:"id,status"}).catch(()=>[]),
+      sb("expenses",{filters:{date:`gte.${monthStart}`},select:"amount,category"}).catch(()=>[]),
+      sb("expenses",{filters:{date:`gte.${lastMonthStart}`},select:"amount,date"}).catch(()=>[]),
+      sb("payments",{filters:{payment_date:`gte.${monthStart}`},select:"amount"}).catch(()=>[]),
+      sb("payments",{filters:{payment_date:`gte.${lastMonthStart}`},select:"amount,payment_date"}).catch(()=>[]),
+      sb("appointments",{filters:{status:`eq.cancelled`,date:`gte.${weekAgo}`},select:"id"}).catch(()=>[]),
+    ]);
+    const byDay={};
+    (appts7||[]).forEach(a=>{const d=DAYS_AR[new Date(a.date).getDay()];byDay[d]=(byDay[d]||0)+1;});
+    const slowDays=Object.entries(byDay).filter(([,v])=>v<4).map(([d])=>d);
+    const totalExp=(expenses||[]).reduce((s,e)=>s+(e.amount||0),0);
+    const lastExpTotal=(lastExp||[]).filter(e=>e.date<=lastMonthEnd).reduce((s,e)=>s+(e.amount||0),0);
+    const expDiff=lastExpTotal>0?Math.round(((totalExp-lastExpTotal)/lastExpTotal)*100):0;
+    const totalRev=(payments||[]).reduce((s,p)=>s+(p.amount||0),0);
+    const lastRevTotal=(lastPay||[]).filter(p=>p.payment_date<=lastMonthEnd).reduce((s,p)=>s+(p.amount||0),0);
+    const revDiff=lastRevTotal>0?Math.round(((totalRev-lastRevTotal)/lastRevTotal)*100):0;
+    const raw = await claude(
+      [{role:"user",content:`أعطني 4 اقتراحات استباقية قصيرة وعملية لمدير عيادة أسنان. كل واحدة جملة أو جملتان. لا مقدمات.
+البيانات:
+- أيام منخفضة الحجز: ${slowDays.join("، ")||"لا يوجد"}
+- مصاريف الشهر: ${totalExp.toLocaleString()} ${expDiff>0?`(↑${expDiff}%)`:expDiff<0?`(↓${Math.abs(expDiff)}%)`:""}
+- إيراد الشهر: ${totalRev.toLocaleString()} ${revDiff>0?`(↑${revDiff}%)`:revDiff<0?`(↓${Math.abs(revDiff)}%)`:""}
+- مواعيد ملغاة الأسبوع: ${(cancelled||[]).length}
+- مواعيد اليوم: ${(todayA||[]).length}
+أعد JSON فقط: {"insights":[{"icon":"🔴 أو 🟡 أو 🟢","title":"عنوان قصير","body":"النص"}]}`}],
+      "أنت مستشار ذكي. أعد JSON فقط بدون markdown."
+    );
+    try {
+      const p = JSON.parse(raw.replace(/```json|```/g,"").trim());
+      buildSidebar(p.insights||[]);
+    } catch { buildSidebar([]); }
+  } catch { buildSidebar([]); }
+}
+
+// ─── SEND MESSAGE ─────────────────────────────────────────
+async function sendMessage() {
+  const ta  = document.getElementById("user-input");
+  const msg = ta.value.trim();
+  if(!msg || isLoading) return;
+  ta.value = ""; autoResize(ta);
+  appendMsg("user", msg);
+  document.getElementById("chips-row").style.display = "none";
+  setLoading(true);
+  try {
+    const {intent, params} = await detectIntent(msg);
+    if(NON_ADMIN_BLOCKED.includes(intent) && currentUser.role!=="admin") {
+      appendMsg("bot","عذراً، لا تملك صلاحية الوصول لهذه المعلومات.");
+      return;
+    }
+    const fetched = await gatherData(intent, params);
+    const ctx = fetched
+      ? `بيانات النظام:\n${JSON.stringify(fetched,null,2)}\n\nطلب: ${msg}`
+      : msg;
+    const response = await claude([{role:"user",content:ctx}], getSystem());
+    appendMsg("bot", response);
+  } catch {
+    appendMsg("bot","حدث خطأ في الاتصال. حاول مرة أخرى.");
+  } finally { setLoading(false); }
+}
+
+function handleKey(e) {
+  if(e.key==="Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+}
+</script>
+</body>
+</html>
