@@ -225,6 +225,7 @@ const NAV={
     {k:'expenses', l:'المصاريف',d:'M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82z'},
     {k:'doctors',  l:'إحصائيات الأطباء',d:'M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2 M23 21v-2a4 4 0 00-3-3.87 M16 3.13a4 4 0 010 7.75'},
     {k:'reports',  l:'التقارير',d:'M18 20V10M12 20V4M6 20v-6'},
+    {k:'bd',       l:'تقرير BD',d:'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z'},
   ],
   doctor:[
     {k:'patients', l:'المرضى',d:'M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2 M9 11a4 4 0 100-8 4 4 0 000 8'},
@@ -248,6 +249,7 @@ const TITLES={
   expenses:['المصاريف','نفقات المركز التشغيلية والتسويقية'],
   doctors:['إحصائيات الأطباء','أداء كل طبيب — إيرادات ومرضى'],
   reports:['التقارير','CAC · LTV · مصادر المرضى · شهري'],
+  bd:['تقرير BD','توزيع المصادر · متوسط القيمة · معدل العودة'],
 };
 
 async function init(){
@@ -305,7 +307,7 @@ function nav(page){
 }
 async function renderPage(page){
   document.getElementById('pg-content').innerHTML='<div class="loading"><div class="spin"></div>تحميل...</div>';
-  const fn={dashboard:renderDash,patients:renderPatients,appts:renderAppts,payments:renderPayments,debts:renderDebts,expenses:renderExpenses,doctors:renderDoctors,reports:renderReports};
+  const fn={dashboard:renderDash,patients:renderPatients,appts:renderAppts,payments:renderPayments,debts:renderDebts,expenses:renderExpenses,doctors:renderDoctors,reports:renderReports,bd:renderBD};
   await(fn[page]||renderDash)();
 }
 function setupRT(){
@@ -617,7 +619,7 @@ async function openPatient(id){
       <div class="info-section">
         <h4>معلومات المريض</h4>
         ${ir('الهاتف',ROLE==='doctor'?'<span style="color:var(--muted)">••••••••••</span>':`<span dir="ltr">${esc(p.phone||'—')}</span>`)}
-        ${ir('الهوية',esc(p.national_id||'—'))}
+        ${p.phone2?ir('هاتف ثاني',ROLE==='doctor'?'<span style="color:var(--muted)">••••••••••</span>':`<span dir="ltr">${esc(p.phone2)}</span>`):''}
         ${ir('الميلاد',p.dob||'—')}
         ${ir('العنوان',esc(p.address||'—'))}
         ${ir('المصدر',p.source_page?`<span class="badge bt">${esc(p.source_page)}</span>`:p.acquisition_source?`<span class="badge bgr">${esc(p.acquisition_source)}</span>`:'—')}
@@ -841,12 +843,15 @@ function modalAddPatient(){
   modal('مريض جديد',`
     <div class="form-group"><label>الاسم *</label><input id="pn"></div>
     <div class="form-row">
-      <div class="form-group"><label>الهاتف</label><input id="pp" dir="ltr"></div>
-      <div class="form-group"><label>الميلاد</label><input id="pd" type="date"></div>
+      <div class="form-group"><label>الهاتف الأول</label><input id="pp" dir="ltr" placeholder="07xxxxxxxx"></div>
+      <div class="form-group"><label>الهاتف الثاني</label><input id="pp2" dir="ltr" placeholder="07xxxxxxxx"></div>
     </div>
-    <div class="form-group"><label>العنوان</label><input id="pa"></div>
     <div class="form-row">
-      <div class="form-group"><label>مصدر المعرفة</label><select id="ps"><option value="">اختر</option>${srcs.map(s=>`<option>${s}</option>`).join('')}</select></div>
+      <div class="form-group"><label>الميلاد</label><input id="pd" type="date"></div>
+      <div class="form-group"><label>العنوان</label><input id="pa"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>مصدر المعرفة *</label><select id="ps"><option value="">اختر</option>${srcs.map(s=>`<option>${s}</option>`).join('')}</select></div>
       <div class="form-group"><label>الصفحة / المُحيل</label><input id="psrc" placeholder="صفحة د. أسامة..."></div>
     </div>
     <div class="form-row">
@@ -879,7 +884,7 @@ async function savePatient(){
   const{count}=await sb.from('patients').select('*',{count:'exact',head:true});
   const pNum='V-'+String((count||0)+1).padStart(4,'0');
   await sb.from('patients').insert({
-    name,phone:v('pp').trim(),dob:v('pd')||null,national_id:v('pnid').trim(),
+    name,phone:v('pp').trim(),phone2:v('pp2').trim(),dob:v('pd')||null,
     address:v('pa').trim(),acquisition_source:v('ps'),source_page:v('psrc').trim(),
     followup_date:v('pfup')||null,followup_note:v('pfupn').trim(),
     refused_treatment:document.getElementById('prefused')?.checked||false,
@@ -1447,6 +1452,135 @@ async function renderReports(){
     </div>`;
 }
 
+// ── BD Report ─────────────────────────────────────────
+async function renderBD(){
+  const[{data:patients},{data:payments}]=await Promise.all([
+    sb.from('patients').select('id,acquisition_source,source_page,created_at'),
+    sb.from('payments').select('patient_id,paid_amount'),
+  ]);
+
+  // بناء map المدفوعات لكل مريض
+  const payMap={};
+  (payments||[]).forEach(p=>{
+    if(!payMap[p.patient_id])payMap[p.patient_id]={total:0,visits:0};
+    payMap[p.patient_id].total+=p.paid_amount||0;
+    payMap[p.patient_id].visits++;
+  });
+
+  // تجميع حسب المصدر
+  const srcMap={};
+  (patients||[]).forEach(p=>{
+    const src=p.source_page||p.acquisition_source||'غير محدد';
+    if(!srcMap[src])srcMap[src]={count:0,paying:0,totalRevenue:0,returning:0};
+    srcMap[src].count++;
+    const pm=payMap[p.id];
+    if(pm&&pm.total>0){
+      srcMap[src].paying++;
+      srcMap[src].totalRevenue+=pm.total;
+      if(pm.visits>1)srcMap[src].returning++;
+    }
+  });
+
+  const srcList=Object.entries(srcMap).sort((a,b)=>b[1].count-a[1].count);
+  const totalPts=(patients||[]).length;
+  const totalRev=Object.values(srcMap).reduce((s,d)=>s+d.totalRevenue,0);
+
+  document.getElementById('pg-content').innerHTML=`
+    <div class="cards" style="margin-bottom:20px">
+      <div class="card" style="border-right-color:var(--teal)"><div class="lbl">إجمالي المرضى</div><div class="val">${totalPts}</div></div>
+      <div class="card" style="border-right-color:var(--success)"><div class="lbl">إجمالي الإيرادات</div><div class="val" style="font-size:14px;color:var(--success)">${fmt(totalRev)}</div></div>
+      <div class="card"><div class="lbl">عدد المصادر</div><div class="val">${srcList.length}</div></div>
+      <div class="card" style="border-right-color:var(--warning)"><div class="lbl">متوسط LTV</div><div class="val" style="font-size:14px">${totalPts?fmt(Math.round(totalRev/totalPts)):'—'}</div></div>
+    </div>
+
+    <div class="tbl-wrap" style="margin-bottom:16px">
+      <div class="tbl-hdr"><h3>📣 تحليل المصادر التفصيلي</h3></div>
+      <div style="overflow-x:auto">
+      <table style="min-width:600px">
+        <thead><tr>
+          <th>المصدر</th>
+          <th>عدد المرضى</th>
+          <th>% من الكل</th>
+          <th>إجمالي الإيراد</th>
+          <th>متوسط/مريض (LTV)</th>
+          <th>معدل التحويل</th>
+          <th>معدل العودة</th>
+        </tr></thead>
+        <tbody>${srcList.map(([src,d])=>{
+          const pct=Math.round(d.count/totalPts*100);
+          const ltv=d.paying>0?Math.round(d.totalRevenue/d.paying):0;
+          const convRate=d.count>0?Math.round(d.paying/d.count*100):0;
+          const retRate=d.paying>0?Math.round(d.returning/d.paying*100):0;
+          const maxCount=srcList[0][1].count;
+          return`<tr>
+            <td>
+              <div style="font-weight:700">${esc(src)}</div>
+              <div style="width:${Math.round(d.count/maxCount*80)}px;height:4px;background:var(--teal);border-radius:2px;margin-top:3px"></div>
+            </td>
+            <td><strong>${d.count}</strong></td>
+            <td><span class="badge ${pct>=20?'bg':pct>=10?'bt':'bgr'}">${pct}%</span></td>
+            <td style="color:var(--success);font-weight:700">${fmt(d.totalRevenue)}</td>
+            <td style="color:var(--teal);font-weight:700">${ltv?fmt(ltv):'—'}</td>
+            <td><span style="color:${convRate>=50?'var(--success)':convRate>=30?'var(--warning)':'var(--danger)'};font-weight:700">${convRate}%</span></td>
+            <td><span style="color:${retRate>=40?'var(--success)':retRate>=20?'var(--warning)':'var(--danger)'};font-weight:700">${retRate}%</span></td>
+          </tr>`;
+        }).join('')||nr(7,'لا توجد بيانات')}
+        </tbody>
+      </table>
+      </div>
+    </div>
+
+    <div class="report-grid">
+      <div class="rc">
+        <h3>📊 توزيع المرضى حسب المصدر</h3>
+        ${srcList.slice(0,8).map(([src,d])=>`
+          <div class="metric-row">
+            <span style="font-size:12px;font-weight:600;min-width:90px">${esc(src)}</span>
+            <div style="flex:1;margin:0 8px;height:7px;background:var(--border);border-radius:4px;overflow:hidden">
+              <div style="width:${Math.round(d.count/totalPts*100)}%;height:100%;background:var(--teal);border-radius:4px"></div>
+            </div>
+            <strong style="font-size:12px;min-width:30px;text-align:left">${d.count}</strong>
+          </div>`).join('')}
+      </div>
+      <div class="rc">
+        <h3>💰 متوسط قيمة المريض (LTV) حسب المصدر</h3>
+        ${srcList.filter(([,d])=>d.paying>0).sort((a,b)=>(b[1].totalRevenue/b[1].paying)-(a[1].totalRevenue/a[1].paying)).slice(0,8).map(([src,d])=>{
+          const ltv=Math.round(d.totalRevenue/d.paying);
+          const maxLTV=Math.max(...srcList.filter(([,x])=>x.paying>0).map(([,x])=>Math.round(x.totalRevenue/x.paying)));
+          return`<div class="metric-row">
+            <span style="font-size:12px;font-weight:600;min-width:90px">${esc(src)}</span>
+            <div style="flex:1;margin:0 8px;height:7px;background:var(--border);border-radius:4px;overflow:hidden">
+              <div style="width:${Math.round(ltv/maxLTV*100)}%;height:100%;background:var(--success);border-radius:4px"></div>
+            </div>
+            <strong style="font-size:11.5px;color:var(--success)">${fmt(ltv)}</strong>
+          </div>`;}).join('')||'<div style="color:var(--muted);font-size:12px;text-align:center;padding:16px">لا توجد مدفوعات</div>'}
+      </div>
+      <div class="rc">
+        <h3>🔄 معدل العودة حسب المصدر</h3>
+        ${srcList.filter(([,d])=>d.paying>0).sort((a,b)=>(b[1].returning/b[1].paying)-(a[1].returning/a[1].paying)).slice(0,8).map(([src,d])=>{
+          const retRate=Math.round(d.returning/d.paying*100);
+          return`<div class="metric-row">
+            <span style="font-size:12px;font-weight:600;min-width:90px">${esc(src)}</span>
+            <div style="flex:1;margin:0 8px;height:7px;background:var(--border);border-radius:4px;overflow:hidden">
+              <div style="width:${retRate}%;height:100%;background:${retRate>=40?'var(--success)':retRate>=20?'var(--warning)':'var(--danger)'};border-radius:4px"></div>
+            </div>
+            <strong style="font-size:12px;color:${retRate>=40?'var(--success)':retRate>=20?'var(--warning)':'var(--danger)'}">${retRate}%</strong>
+          </div>`;}).join('')||'<div style="color:var(--muted);font-size:12px;text-align:center;padding:16px">لا توجد بيانات</div>'}
+      </div>
+      <div class="rc">
+        <h3>🏆 أفضل المصادر أداءً</h3>
+        ${srcList.sort((a,b)=>b[1].totalRevenue-a[1].totalRevenue).slice(0,5).map(([src,d],i)=>`
+          <div class="metric-row">
+            <span style="font-size:12px;font-weight:700">${['🥇','🥈','🥉','4️⃣','5️⃣'][i]} ${esc(src)}</span>
+            <div style="text-align:left">
+              <div style="font-size:12px;color:var(--success);font-weight:700">${fmt(d.totalRevenue)}</div>
+              <div style="font-size:10px;color:var(--muted)">${d.count} مريض</div>
+            </div>
+          </div>`).join('')}
+      </div>
+    </div>`;
+}
+
 // ── Modal ─────────────────────────────────────────────
 function modal(title,body){
   document.getElementById('modal-root').innerHTML=`
@@ -1461,6 +1595,5 @@ function closeModal(){document.getElementById('modal-root').innerHTML='';}
 
 init();
 </script>
-<div style="position:fixed;bottom:85px;left:16px;z-index:9999"><a href="agent.html" target="_blank" style="display:inline-flex;align-items:center;gap:6px;padding:10px 16px;background:linear-gradient(135deg,#0d9488,#0891b2);color:#fff;border-radius:12px;font-size:13px;font-weight:700;text-decoration:none;font-family:'Cairo',sans-serif;box-shadow:0 4px 16px rgba(13,148,136,.4)">🤖 المساعد الذكي</a></div>
 </body>
 </html>
