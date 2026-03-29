@@ -451,9 +451,14 @@ async function renderPatients(){
 
 // ── Patient Detail ────────────────────────────────────
 async function openPatient(id){
+  // الطبيب يرى فقط دفعاته في ملف المريض
+  const drName=USER?.user_metadata?.name||'';
+  let paysQ=sb.from('payments').select('*').eq('patient_id',id).order('date',{ascending:false});
+  if(ROLE==='doctor') paysQ=paysQ.eq('doctor_name',drName);
+
   const[{data:p},{data:pays},{data:files},{data:appts},{data:teeth},{data:plans}]=await Promise.all([
     sb.from('patients').select('*').eq('id',id).single(),
-    sb.from('payments').select('*').eq('patient_id',id).order('date',{ascending:false}),
+    paysQ,
     sb.from('patient_files').select('*').eq('patient_id',id).order('created_at',{ascending:false}),
     sb.from('appointments').select('*').eq('patient_id',id).order('date',{ascending:false}),
     sb.from('tooth_records').select('*').eq('patient_id',id),
@@ -638,6 +643,13 @@ async function openPatient(id){
         ${ir('الجلسات',`<strong>${(pays||[]).length}</strong>`)}
         ${p.followup_date?ir('المتابعة',`<span style="color:var(--warning);font-weight:700">📅 ${p.followup_date}</span>`):''}
         ${p.followup_note?`<div style="margin-top:6px;font-size:11px;color:var(--muted)">${esc(p.followup_note)}</div>`:''}
+        <div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--border)">
+          <div style="font-size:10px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">⭐ رضى المريض</div>
+          <div style="display:flex;gap:4px;align-items:center;flex-wrap:wrap">
+            ${[1,2,3,4,5,6,7,8,9,10].map(n=>`<button onclick="saveSatisfaction('${id}',${n})" style="width:28px;height:28px;border-radius:6px;border:1.5px solid ${p.satisfaction_score===n?'var(--teal)':'var(--border)'};background:${p.satisfaction_score===n?'var(--teal)':'#f8fafc'};color:${p.satisfaction_score===n?'#fff':'var(--text)'};font-size:11.5px;font-weight:700;cursor:pointer;font-family:Cairo,sans-serif">${n}</button>`).join('')}
+            ${p.satisfaction_score?`<span style="margin-right:6px;font-size:12px;color:var(--teal);font-weight:700">${p.satisfaction_score>=8?'😊 ممتاز':p.satisfaction_score>=6?'🙂 جيد':p.satisfaction_score>=4?'😐 متوسط':'😞 ضعيف'}</span>`:'<span style="font-size:11px;color:var(--muted)">لم يُقيَّم</span>'}
+          </div>
+        </div>
       </div>
     </div>
 
@@ -645,13 +657,14 @@ async function openPatient(id){
       <div>
         <div class="tbl-wrap">
           <div class="tbl-hdr"><h3>سجل المدفوعات</h3></div>
-          <table><thead><tr><th>التاريخ</th><th>الخدمة</th><th>السن</th><th>الكلي</th><th>المدفوع</th><th>المتبقي</th>${ROLE==='admin'?'<th></th>':ROLE==='reception'?'<th>تحصيل</th>':''}</tr></thead>
+          <table><thead><tr><th>التاريخ</th><th>الخدمة</th><th>السن</th><th>الكلي</th><th>المدفوع</th><th>المتبقي</th><th>رضى</th>${ROLE==='admin'?'<th></th>':ROLE==='reception'?'<th>تحصيل</th>':''}</tr></thead>
           <tbody>${(pays||[]).map(x=>`<tr>
             <td>${x.date}</td><td>${esc(x.service||'—')}</td>
             <td>${x.tooth_number?`<span class="badge bb">#${x.tooth_number}</span>`:'—'}</td>
             <td>${fmt(x.total_amount)}</td>
             <td style="color:var(--success);font-weight:700">${fmt(x.paid_amount)}</td>
             <td>${x.remaining>0?`<span style="color:var(--danger);font-weight:700">${fmt(x.remaining)}</span>`:'<span class="badge bg">✓</span>'}</td>
+            <td>${x.satisfaction_score?`<span style="font-weight:800;color:${x.satisfaction_score>=8?'var(--success)':x.satisfaction_score>=5?'var(--warning)':'var(--danger)'}">${x.satisfaction_score}/10</span>`:'—'}</td>
             ${ROLE==='admin'?`<td style="white-space:nowrap"><button class="btn btn-outline btn-sm" onclick="modalEditPayment('${x.id}','${id}')">✏</button> <button class="btn btn-danger btn-sm" onclick="deletePayment('${x.id}','${id}')">🗑</button></td>`:''}
             ${ROLE==='reception'&&x.remaining>0?'<td><button class="btn btn-success btn-sm" onclick="modalCollectRemaining(\''+x.id+'\',\''+id+'\','+x.remaining+',\''+esc(x.service||'')+'\')">تحصيل</button></td>':ROLE==='reception'?'<td>—</td>':''}
           </tr>`).join('')||nr(ROLE==='admin'?7:ROLE==='reception'?7:6,'لا توجد مدفوعات')}</tbody></table>
@@ -1059,13 +1072,19 @@ async function updAppt(id,status){await sb.from('appointments').update({status})
 
 // ── Payments ──────────────────────────────────────────
 async function renderPayments(){
-  const{data:pays}=await sb.from('payments').select('*').order('date',{ascending:false}).order('created_at',{ascending:false});
+  let q=sb.from('payments').select('*').order('date',{ascending:false}).order('created_at',{ascending:false});
+  // الطبيب يرى فقط دفعاته هو
+  if(ROLE==='doctor'){
+    const drName=USER?.user_metadata?.name||'';
+    q=q.eq('doctor_name',drName);
+  }
+  const{data:pays}=await q;
   document.getElementById('pg-content').innerHTML=`
     <div style="display:flex;justify-content:flex-end;margin-bottom:13px">
       ${ROLE!=='reception'?`<button class="btn btn-primary" onclick="modalPayGlobal()">+ تسجيل دفعة</button>`:''}
     </div>
     <div class="tbl-wrap">
-      <div class="tbl-hdr"><h3>سجل المدفوعات</h3><div class="rt-label"><span class="rt-dot"></span>حي</div></div>
+      <div class="tbl-hdr"><h3>سجل المدفوعات ${ROLE==='doctor'?'— دفعاتي فقط':''}</h3><div class="rt-label"><span class="rt-dot"></span>حي</div></div>
       <table><thead><tr><th>المريض</th><th>التاريخ</th><th>الخدمة</th><th>الكلي</th><th>المدفوع</th><th>المتبقي</th><th>الطبيب</th>${ROLE==='admin'?'<th></th>':''}</tr></thead>
       <tbody>${(pays||[]).map(p=>`<tr onclick="openPatient('${p.patient_id}')">
         <td style="font-weight:700">${esc(p.patient_name||'—')}</td><td>${p.date}</td><td>${esc(p.service||'—')}</td>
@@ -1103,7 +1122,14 @@ function modalAddPayment(fixId='',fixName='',pts=[]){
     <div id="pay-rem-info" class="alert a-info">المتبقي: 0 د.ع</div>
     <div class="form-group"><label>التاريخ <span style="color:var(--muted);font-size:10.5px">(قابل للتعديل)</span></label><input id="pay-date" type="date" value="${todayStr()}"></div>
     <div class="form-group"><label>ملاحظات</label><textarea id="pay-n" rows="2"></textarea></div>
-    <div class="form-actions">
+    <div class="form-group">
+      <label>⭐ نسبة رضى المريض (1-10)</label>
+      <div style="display:flex;gap:6px;margin-top:5px;flex-wrap:wrap" id="satisfaction-btns">
+        ${[1,2,3,4,5,6,7,8,9,10].map(n=>`<button type="button" onclick="setSatisfaction(${n})" id="sat-${n}"
+          style="width:34px;height:34px;border-radius:8px;border:2px solid var(--border);background:#f8fafc;font-size:13px;font-weight:700;cursor:pointer;transition:all .15s;font-family:'Cairo',sans-serif">${n}</button>`).join('')}
+      </div>
+      <input type="hidden" id="pay-sat" value="">
+    </div>
       <button class="btn btn-outline" onclick="closeModal()">إلغاء</button>
       <button class="btn btn-primary" onclick="savePay('${fixId}','${esc(fixName)}')">حفظ</button>
     </div>`);
@@ -1115,6 +1141,17 @@ function calcRem(){
   if(el){el.textContent=`المتبقي: ${r.toLocaleString('ar-IQ')} د.ع`;el.className=`alert ${r>0?'a-warn':'a-ok'}`;}
 }
 
+function setSatisfaction(n){
+  document.getElementById('pay-sat').value=n;
+  [1,2,3,4,5,6,7,8,9,10].forEach(i=>{
+    const btn=document.getElementById('sat-'+i);if(!btn)return;
+    if(i<=n){
+      btn.style.background=n>=8?'var(--success)':n>=5?'var(--warning)':'var(--danger)';
+      btn.style.color='#fff';btn.style.borderColor=n>=8?'var(--success)':n>=5?'var(--warning)':'var(--danger)';
+    }else{btn.style.background='#f8fafc';btn.style.color='var(--text)';btn.style.borderColor='var(--border)';}
+  });
+}
+
 async function savePay(fixId,fixName){
   let pid=fixId,pname=fixName;
   if(!pid){const pv=v('pay-p');if(!pv){alert('اختر مريضاً');return;}[pid,pname]=pv.split('|');}
@@ -1122,8 +1159,14 @@ async function savePay(fixId,fixName){
   const service=v('pay-s').trim();if(!service){alert('أدخل الخدمة');return;}
   // اسم الطبيب — من حقل النموذج أو من بيانات المستخدم الحالي
   const drName=document.getElementById('pay-dr')?.value?.trim()||USER?.user_metadata?.name||'';
-  await sb.from('payments').insert({patient_id:pid,patient_name:pname,service,total_amount:total,paid_amount:paid,remaining,date:v('pay-date'),doctor_name:drName,tooth_number:v('pay-tooth')||null,notes:v('pay-n').trim(),recorded_by:USER?.email});
+  const sat=v('pay-sat');
+  await sb.from('payments').insert({patient_id:pid,patient_name:pname,service,total_amount:total,paid_amount:paid,remaining,date:v('pay-date'),doctor_name:drName,tooth_number:v('pay-tooth')||null,notes:v('pay-n').trim(),recorded_by:USER?.email,satisfaction_score:sat?Number(sat):null});
   closeModal();renderPage(CUR);
+}
+
+async function saveSatisfaction(pid,score){
+  await sb.from('patients').update({satisfaction_score:score}).eq('id',pid);
+  openPatient(pid);
 }
 
 function modalCollectRemaining(payId,patientId,remaining,service){
