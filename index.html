@@ -1453,6 +1453,21 @@ async function renderReports(){
     sb.from('patients').select('*',{count:'exact',head:true}).gte('created_at',mo).lte('created_at',moEnd),
     sb.from('patients').select('name,acquisition_source,source_page').gte('created_at',mo).lte('created_at',moEnd),
   ]);
+  // جلب تفاصيل المرضى الجدد مع أول طبيب زاروه
+  const{data:moNewPtsDetail}=await sb.from('patients')
+    .select('id,name,acquisition_source,source_page,created_at,phone')
+    .gte('created_at',mo).lte('created_at',moEnd)
+    .order('created_at',{ascending:false});
+  // جلب أول دفعة لكل مريض جديد لمعرفة الطبيب
+  const newPtIds=(moNewPtsDetail||[]).map(p=>p.id);
+  let firstPayMap={};
+  if(newPtIds.length>0){
+    const{data:firstPays}=await sb.from('payments')
+      .select('patient_id,doctor_name,date')
+      .in('patient_id',newPtIds)
+      .order('date',{ascending:true});
+    (firstPays||[]).forEach(p=>{if(!firstPayMap[p.patient_id])firstPayMap[p.patient_id]=p.doctor_name||'—';});
+  }
   const income=(allPays||[]).reduce((s,p)=>s+(p.paid_amount||0),0);
   const moIncome=(moPays||[]).reduce((s,p)=>s+(p.paid_amount||0),0);
   const expTotal=(exps||[]).reduce((s,e)=>s+(e.amount||0),0);
@@ -1490,6 +1505,35 @@ async function renderReports(){
       <div class="card"><div class="lbl">💳 دفعوا الشهر</div><div class="val">${moPaidPts}</div></div>
       <div class="card" style="border-right-color:var(--warning)"><div class="lbl">🎯 CAC</div><div class="val" style="font-size:15px">${fmt(cac)}</div></div>
       <div class="card" style="border-right-color:var(--teal)"><div class="lbl">🔄 معدل العودة</div><div class="val" style="font-size:18px;color:${returnRateAll>=40?'var(--success)':returnRateAll>=20?'var(--warning)':'var(--danger)'}">${returnRateAll}%</div><div class="sub">${returningPtsCount} من ${uniquePay} مريض — بعد شهرين</div></div>
+    </div>
+    <div class="tbl-wrap" style="margin-bottom:16px">
+      <div class="tbl-hdr">
+        <h3>👥 المرضى الجدد — ${RPT_MONTH} (${(moNewPtsDetail||[]).length})</h3>
+      </div>
+      ${(moNewPtsDetail||[]).length>0?`
+      <div style="overflow-x:auto">
+      <table style="min-width:500px">
+        <thead><tr>
+          <th>الاسم</th>
+          <th>تاريخ التسجيل</th>
+          <th>مصدر المعرفة</th>
+          <th>المحيل / الصفحة</th>
+          <th>الطبيب</th>
+        </tr></thead>
+        <tbody>${(moNewPtsDetail||[]).map(p=>{
+          const src=p.acquisition_source||'—';
+          const ref=p.source_page||'—';
+          const dr=firstPayMap[p.id]||'لم يزر بعد';
+          return`<tr>
+            <td style="font-weight:700">${esc(p.name)}</td>
+            <td style="font-size:11px;color:var(--muted)">${p.created_at?.slice(0,10)||'—'}</td>
+            <td>${src!=='—'?`<span class="badge bgr">${esc(src)}</span>`:'<span style="color:var(--muted);font-size:11px">—</span>'}</td>
+            <td style="font-size:11.5px;color:var(--muted)">${ref!=='—'?esc(ref):'—'}</td>
+            <td>${dr!=='لم يزر بعد'?`<span class="badge bt">${esc(dr)}</span>`:`<span style="color:var(--muted);font-size:11px">${dr}</span>`}</td>
+          </tr>`;
+        }).join('')}</tbody>
+      </table>
+      </div>`:`<div style="text-align:center;color:var(--muted);padding:26px;font-size:12px">لا مرضى جدد هذا الشهر</div>`}
     </div>
     <div class="report-grid">
       <div class="rc"><h3>📣 مصادر المرضى الجدد — ${RPT_MONTH}</h3>
