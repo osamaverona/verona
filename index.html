@@ -1288,19 +1288,24 @@ async function renderExpenses(){
     </div>
     <div class="tbl-wrap">
       <div class="tbl-hdr"><h3>سجل المصاريف</h3></div>
-      <table><thead><tr><th>التاريخ</th><th>الفئة</th><th>البيان</th><th>المبلغ</th><th>النوع</th></tr></thead>
+      <table><thead><tr><th>التاريخ</th><th>الفئة</th><th>البيان</th><th>المبلغ</th><th>النوع</th><th></th></tr></thead>
       <tbody>${(exps||[]).map(e=>`<tr>
         <td>${e.date}</td><td><span class="badge bgr">${esc(e.category)}</span></td><td>${esc(e.description)}</td>
         <td style="color:var(--danger);font-weight:700">${fmt(e.amount)}</td>
         <td>${e.is_marketing?'<span class="badge bo">تسويق</span>':'<span class="badge bgr">تشغيل</span>'}</td>
-      </tr>`).join('')||nr(5)}</tbody></table>
+        <td style="white-space:nowrap">
+          <button class="btn btn-outline btn-sm" onclick="modalEditExp('${e.id}','${esc(e.category)}','${esc(e.description)}',${e.amount},'${e.date}',${!!e.is_marketing})">✏</button>
+          <button class="btn btn-danger btn-sm" onclick="deleteExp('${e.id}')">🗑</button>
+        </td>
+      </tr>`).join('')||nr(6)}</tbody></table>
     </div>`;
 }
+const EXP_CATS=['مستلزمات طبية','رواتب','إيجار','كهرباء','ماء','إنترنت','صيانة','إعلانات','تسويق رقمي','🔬 مختبر أسنان','🦷 شركة زراعة','🏢 مكتب أسنان','💊 أدوية ومخدرات','🛠 معدات وأجهزة','أخرى'];
+
 function modalAddExp(){
-  const cats=['مستلزمات طبية','رواتب','إيجار','كهرباء','ماء','إنترنت','صيانة','إعلانات','تسويق رقمي','🔬 مختبر أسنان','🦷 شركة زراعة','🏢 مكتب أسنان','💊 أدوية ومخدرات','🛠 معدات وأجهزة','أخرى'];
   modal('إضافة مصروف',`
     <div class="form-row">
-      <div class="form-group"><label>الفئة</label><select id="ex-c">${cats.map(c=>`<option>${c}</option>`).join('')}</select></div>
+      <div class="form-group"><label>الفئة</label><select id="ex-c">${EXP_CATS.map(c=>`<option>${c}</option>`).join('')}</select></div>
       <div class="form-group"><label>التاريخ</label><input id="ex-d" type="date" value="${todayStr()}"></div>
     </div>
     <div class="form-group"><label>البيان *</label><input id="ex-desc"></div>
@@ -1318,6 +1323,36 @@ async function saveExp(){
   if(!desc||!amount){alert('أدخل البيان والمبلغ');return;}
   await sb.from('expenses').insert({category:v('ex-c'),description:desc,amount,date:v('ex-d'),is_marketing:document.getElementById('ex-mkt').checked});
   closeModal();renderExpenses();
+}
+
+function modalEditExp(id,cat,desc,amount,date,isMkt){
+  modal('تعديل المصروف',`
+    <div class="form-row">
+      <div class="form-group"><label>الفئة</label>
+        <select id="ex-c">${EXP_CATS.map(c=>`<option ${c===cat?'selected':''}>${c}</option>`).join('')}</select>
+      </div>
+      <div class="form-group"><label>التاريخ</label><input id="ex-d" type="date" value="${date}"></div>
+    </div>
+    <div class="form-group"><label>البيان *</label><input id="ex-desc" value="${esc(desc)}"></div>
+    <div class="form-group"><label>المبلغ (د.ع) *</label><input id="ex-a" type="number" value="${amount}"></div>
+    <label style="display:flex;align-items:center;gap:7px;font-size:12px;cursor:pointer;margin-bottom:12px">
+      <input type="checkbox" id="ex-mkt" ${isMkt?'checked':''} style="width:auto;accent-color:var(--teal)"> مصروف تسويقي (يُحتسب في CAC)
+    </label>
+    <div class="form-actions">
+      <button class="btn btn-outline" onclick="closeModal()">إلغاء</button>
+      <button class="btn btn-primary" onclick="saveEditExp('${id}')">حفظ</button>
+    </div>`);
+}
+async function saveEditExp(id){
+  const desc=v('ex-desc').trim(),amount=Number(v('ex-a')||0);
+  if(!desc||!amount){alert('أدخل البيان والمبلغ');return;}
+  await sb.from('expenses').update({category:v('ex-c'),description:desc,amount,date:v('ex-d'),is_marketing:document.getElementById('ex-mkt').checked}).eq('id',id);
+  closeModal();renderExpenses();
+}
+async function deleteExp(id){
+  if(!confirm('حذف هذا المصروف نهائياً؟'))return;
+  await sb.from('expenses').delete().eq('id',id);
+  renderExpenses();
 }
 
 // ── Doctor Stats ──────────────────────────────────────
