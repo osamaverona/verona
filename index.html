@@ -440,7 +440,7 @@ async function renderPatients(){
         <td><span class="pt-num">${esc(p.patient_number||'—')}</span></td>
         <td style="font-weight:800">${esc(p.name)}</td>
         <td dir="ltr">${ROLE==='doctor'?'<span style="color:var(--border)">••••••••••</span>':esc(p.phone||'—')}</td>
-        <td>${p.source_page?`<span class="badge bt">${esc(p.source_page)}</span>`:p.acquisition_source?`<span class="badge bgr">${esc(p.acquisition_source)}</span>`:'—'}</td>
+        <td>${p.acquisition_source?`<span class="badge bgr">${esc(p.acquisition_source)}</span>`:p.source_page?`<span class="badge bt">${esc(p.source_page)}</span>`:'—'}</td>
         <td>${p.followup_date?`<span style="color:var(--warning);font-weight:700;font-size:11px">📅 ${p.followup_date}</span>`:'—'}</td>
         <td>${p.refused_treatment?'<span class="badge br">رفض</span>':'<span class="badge bg">نشط</span>'}</td>
         <td><button class="btn btn-outline btn-sm" onclick="event.stopPropagation();openPatient('${p.id}')">فتح ←</button></td>
@@ -618,7 +618,7 @@ async function openPatient(id){
         ${p.phone2?ir('هاتف ثاني',ROLE==='doctor'?'<span style="color:var(--muted)">••••••••••</span>':`<span dir="ltr">${esc(p.phone2)}</span>`):''}
         ${ir('الميلاد',p.dob||'—')}
         ${ir('العنوان',esc(p.address||'—'))}
-        ${ir('المصدر',p.source_page?`<span class="badge bt">${esc(p.source_page)}</span>`:p.acquisition_source?`<span class="badge bgr">${esc(p.acquisition_source)}</span>`:'—')}
+        ${ir('المصدر',p.acquisition_source?`<span class="badge bgr">${esc(p.acquisition_source)}</span>`:p.source_page?`<span class="badge bt">${esc(p.source_page)}</span>`:'—')}
         ${p.notes?`<div style="margin-top:8px;font-size:11.5px;color:var(--muted);line-height:1.6">${esc(p.notes)}</div>`:''}
         <div style="margin-top:10px;display:flex;gap:5px;flex-wrap:wrap">
           <button class="btn btn-outline btn-sm" onclick="modalEditPatient('${id}')">✏ تعديل</button>
@@ -1468,11 +1468,11 @@ async function renderReports(){
   const returnRateAll=uniquePay>0?Math.round(returningPtsCount/uniquePay*100):0;
   const cac=(newPts||0)>0?Math.round(mktMo/(newPts||1)):0;
   const ltvCac=cac>0?(ltv/cac).toFixed(1):'—';
-  const srcMap={};(moPatients||[]).forEach(p=>{const src=p.source_page||p.acquisition_source||'';if(!src)return;if(!srcMap[src])srcMap[src]=0;srcMap[src]++;});
+  const srcMap={};(moPatients||[]).forEach(p=>{const src=p.acquisition_source||p.source_page||'';if(!src)return;if(!srcMap[src])srcMap[src]=0;srcMap[src]++;});
   const srcList=Object.entries(srcMap).sort((a,b)=>b[1]-a[1]);
   const moPaidPts=[...new Set((moPays||[]).map(p=>p.patient_id))].length;
   const{data:allPatients}=await sb.from('patients').select('acquisition_source,source_page');
-  const allSrcMap={};(allPatients||[]).forEach(p=>{const src=p.source_page||p.acquisition_source||'';if(!src)return;if(!allSrcMap[src])allSrcMap[src]=0;allSrcMap[src]++;});
+  const allSrcMap={};(allPatients||[]).forEach(p=>{const src=p.acquisition_source||p.source_page||'';if(!src)return;if(!allSrcMap[src])allSrcMap[src]=0;allSrcMap[src]++;});
   const allSrcList=Object.entries(allSrcMap).sort((a,b)=>b[1]-a[1]);
   const allTotal=(allPatients||[]).length;
   document.getElementById('pg-content').innerHTML=`
@@ -1556,7 +1556,7 @@ async function renderBD(){
   const srcMap={};
   let undefinedCount=0,undefinedPaying=0;
   (patients||[]).forEach(p=>{
-    const src=p.source_page||p.acquisition_source||'';
+    const src=p.acquisition_source||p.source_page||'';
     // تجاهل المرضى بدون مصدر محدد
     if(!src){undefinedCount++;const pm=payMap[p.id];if(pm&&pm.total>0)undefinedPaying++;return;}
     if(!srcMap[src])srcMap[src]={count:0,paying:0,totalRevenue:0,returning:0};
