@@ -1363,7 +1363,7 @@ async function renderDoctors(){
   const getDrPct=(name)=>Number(localStorage.getItem('dr_pct_'+name)||40);
   const[{data:pays},{data:allPays}]=await Promise.all([
     sb.from('payments').select('doctor_name,paid_amount,patient_id,service,date').gte('date',mo).lte('date',moEnd),
-    sb.from('payments').select('doctor_name,patient_id'),
+    sb.from('payments').select('doctor_name,patient_id,date').order('date',{ascending:true}),
   ]);
   const map={};
   (pays||[]).forEach(p=>{
@@ -1374,13 +1374,22 @@ async function renderDoctors(){
     if(!map[dr].services[svc])map[dr].services[svc]={count:0,income:0};
     map[dr].services[svc].count++;map[dr].services[svc].income+=p.paid_amount||0;
   });
+  // بناء returnMap مع التواريخ لكل مريض لكل طبيب
   const returnMap={};
   (allPays||[]).forEach(p=>{
     const dr=p.doctor_name||'غير محدد';
     if(!returnMap[dr])returnMap[dr]=new Map();
-    returnMap[dr].set(p.patient_id,(returnMap[dr].get(p.patient_id)||0)+1);
+    const existing=returnMap[dr].get(p.patient_id)||[];
+    existing.push(p.date);
+    returnMap[dr].set(p.patient_id,existing);
   });
-  const getReturnRate=(dr)=>{const m=returnMap[dr];if(!m||m.size===0)return 0;return Math.round([...m.values()].filter(v=>v>1).length/m.size*100);};
+  // معدل العودة = مرضى عندهم زيارتين مستقلتين أو أكثر (بفاصل شهرين)
+  const getReturnRate=(dr)=>{
+    const m=returnMap[dr];if(!m||m.size===0)return 0;
+    let returning=0;
+    m.forEach(dates=>{if(calcIndependentVisits(dates)>1)returning++;});
+    return Math.round(returning/m.size*100);
+  };
   const drList=Object.entries(map).sort((a,b)=>b[1].income-a[1].income);
   const allSvcs=[...new Set(Object.values(map).flatMap(d=>Object.keys(d.services)))].sort();
   document.getElementById('pg-content').innerHTML=`
@@ -1425,7 +1434,7 @@ async function renderDoctors(){
         const retRate=getReturnRate(dr);
         const total=returnMap[dr]?returnMap[dr].size:0;
         const returning=returnMap[dr]?[...returnMap[dr].values()].filter(v=>v>1).length:0;
-        return '<div class="metric-row"><span style="font-size:12.5px;font-weight:700;min-width:120px">'+dr+'</span><div style="flex:1;margin:0 10px;height:8px;background:var(--border);border-radius:4px;overflow:hidden"><div style="width:'+retRate+'%;height:100%;background:'+(retRate>=50?'var(--success)':retRate>=30?'var(--warning)':'var(--danger)')+';border-radius:4px"></div></div><div style="text-align:left;min-width:160px"><strong style="font-size:13px;color:'+(retRate>=50?'var(--success)':retRate>=30?'var(--warning)':'var(--danger)')+'">'+retRate+'%</strong><span style="font-size:10.5px;color:var(--muted);margin-right:6px">('+returning+' من '+total+' مريض)</span></div></div>';
+        return '<div class="metric-row"><span style="font-size:12.5px;font-weight:700;min-width:120px">'+dr+'</span><div style="flex:1;margin:0 10px;height:8px;background:var(--border);border-radius:4px;overflow:hidden"><div style="width:'+retRate+'%;height:100%;background:'+(retRate>=50?'var(--success)':retRate>=30?'var(--warning)':'var(--danger)')+';border-radius:4px"></div></div><div style="text-align:left;min-width:160px"><strong style="font-size:13px;color:'+(retRate>=50?'var(--success)':retRate>=30?'var(--warning)':'var(--danger)')+'">'+retRate+'%</strong><span style="font-size:10.5px;color:var(--muted);margin-right:6px">('+[...( returnMap[dr]||new Map()).values()].filter(dates=>calcIndependentVisits(dates)>1).length+' من '+(returnMap[dr]?.size||0)+' مريض — بفاصل شهرين)</span></div></div>';
       }).join('')}
     </div>`:''}`;
 }
@@ -1436,7 +1445,7 @@ async function renderReports(){
   const mo=RPT_MONTH+'-01';const moEnd=getMonthEnd(RPT_MONTH);
   const months=[];const d=new Date();for(let i=0;i<12;i++){const y=d.getFullYear(),m=String(d.getMonth()+1).padStart(2,'0');months.push(`${y}-${m}`);d.setMonth(d.getMonth()-1);}
   const[{data:allPays},{data:moPays},{data:exps},{data:moExps},{count:totalPts},{count:newPts},{data:moPatients}]=await Promise.all([
-    sb.from('payments').select('paid_amount,patient_id'),
+    sb.from('payments').select('paid_amount,patient_id,date').order('date',{ascending:true}),
     sb.from('payments').select('*').gte('date',mo).lte('date',moEnd),
     sb.from('expenses').select('amount'),
     sb.from('expenses').select('amount,is_marketing').gte('date',mo).lte('date',moEnd),
@@ -1452,6 +1461,11 @@ async function renderReports(){
   const moProfit=moIncome-moExpTotal;
   const uniquePay=[...new Set((allPays||[]).map(p=>p.patient_id))].length;
   const ltv=uniquePay>0?Math.round(income/uniquePay):0;
+  // معدل العودة الحقيقي: مرضى عادوا بعد فاصل أكثر من شهرين
+  const payDatesMap={};
+  (allPays||[]).forEach(p=>{if(!payDatesMap[p.patient_id])payDatesMap[p.patient_id]=[];if(p.date)payDatesMap[p.patient_id].push(p.date);});
+  const returningPtsCount=Object.values(payDatesMap).filter(dates=>calcIndependentVisits(dates)>1).length;
+  const returnRateAll=uniquePay>0?Math.round(returningPtsCount/uniquePay*100):0;
   const cac=(newPts||0)>0?Math.round(mktMo/(newPts||1)):0;
   const ltvCac=cac>0?(ltv/cac).toFixed(1):'—';
   const srcMap={};(moPatients||[]).forEach(p=>{const src=p.source_page||p.acquisition_source||'غير محدد';if(!srcMap[src])srcMap[src]=0;srcMap[src]++;});
@@ -1475,6 +1489,7 @@ async function renderReports(){
       <div class="card"><div class="lbl">👥 مرضى جدد</div><div class="val">${newPts||0}</div></div>
       <div class="card"><div class="lbl">💳 دفعوا الشهر</div><div class="val">${moPaidPts}</div></div>
       <div class="card" style="border-right-color:var(--warning)"><div class="lbl">🎯 CAC</div><div class="val" style="font-size:15px">${fmt(cac)}</div></div>
+      <div class="card" style="border-right-color:var(--teal)"><div class="lbl">🔄 معدل العودة</div><div class="val" style="font-size:18px;color:${returnRateAll>=40?'var(--success)':returnRateAll>=20?'var(--warning)':'var(--danger)'}">${returnRateAll}%</div><div class="sub">${returningPtsCount} من ${uniquePay} مريض — بعد شهرين</div></div>
     </div>
     <div class="report-grid">
       <div class="rc"><h3>📣 مصادر المرضى الجدد — ${RPT_MONTH}</h3>
@@ -1506,21 +1521,46 @@ async function renderReports(){
     </div>`;
 }
 
+// ── حساب الزيارات المستقلة (فاصل شهرين) ─────────────────
+// الزيارات خلال شهرين من أول زيارة = زيارة واحدة
+// إذا رجع بعد شهرين = زيارة مستقلة جديدة
+function calcIndependentVisits(dates){
+  if(!dates||dates.length===0)return 0;
+  const sorted=dates.map(d=>new Date(d)).sort((a,b)=>a-b);
+  let visits=1,windowStart=sorted[0];
+  for(let i=1;i<sorted.length;i++){
+    const diffMs=sorted[i]-windowStart;
+    const diffDays=diffMs/(1000*60*60*24);
+    if(diffDays>60){visits++;windowStart=sorted[i];}
+  }
+  return visits;
+}
+
 // ── BD Report ─────────────────────────────────────────
 async function renderBD(){
   const[{data:patients},{data:payments}]=await Promise.all([
     sb.from('patients').select('id,acquisition_source,source_page,created_at'),
-    sb.from('payments').select('patient_id,paid_amount'),
+    sb.from('payments').select('patient_id,paid_amount,date').order('date',{ascending:true}),
   ]);
+  // بناء payMap مع التواريخ لحساب الزيارات المستقلة
   const payMap={};
-  (payments||[]).forEach(p=>{if(!payMap[p.patient_id])payMap[p.patient_id]={total:0,visits:0};payMap[p.patient_id].total+=p.paid_amount||0;payMap[p.patient_id].visits++;});
+  (payments||[]).forEach(p=>{
+    if(!payMap[p.patient_id])payMap[p.patient_id]={total:0,dates:[]};
+    payMap[p.patient_id].total+=p.paid_amount||0;
+    if(p.date)payMap[p.patient_id].dates.push(p.date);
+  });
+  // احسب الزيارات المستقلة لكل مريض
+  Object.keys(payMap).forEach(pid=>{
+    payMap[pid].independentVisits=calcIndependentVisits(payMap[pid].dates);
+  });
   const srcMap={};
   (patients||[]).forEach(p=>{
     const src=p.source_page||p.acquisition_source||'غير محدد';
     if(!srcMap[src])srcMap[src]={count:0,paying:0,totalRevenue:0,returning:0};
     srcMap[src].count++;
     const pm=payMap[p.id];
-    if(pm&&pm.total>0){srcMap[src].paying++;srcMap[src].totalRevenue+=pm.total;if(pm.visits>1)srcMap[src].returning++;}
+    // عائد = مريض عنده زيارتين مستقلتين أو أكثر (بفاصل أكثر من شهرين)
+    if(pm&&pm.total>0){srcMap[src].paying++;srcMap[src].totalRevenue+=pm.total;if(pm.independentVisits>1)srcMap[src].returning++;}
   });
   const srcList=Object.entries(srcMap).sort((a,b)=>b[1].count-a[1].count);
   const totalPts=(patients||[]).length;
