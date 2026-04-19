@@ -202,6 +202,9 @@ let sb=null,USER=null,ROLE='reception',RT=null,CUR='dashboard';
 let PT_PAGE=1,PT_SEARCH='',PT_FILTER='all',RPT_MONTH=todayStr().slice(0,7);
 const PT_PER=50;
 
+// ── قائمة الخدمات الموحدة ─────────────────────────────────────────────────
+const SERVICES=['S+P','Smile','تقويم شفاف','TMG','زراعة','حشوة','حشوة جذر','تغليف','تحنيط','حافظ مسافة','قص لثة','تقويم معدني','قلع','قلع جراحي','فلورايد','حقن','عملية جراحية','زراعة عظم','رفع جيب انفي','متابعة','تثبيت الابتسامة','غاز ضاحك','مقدمة عمل','ليزر','Gpt'];
+
 const getConf=()=>{try{return JSON.parse(localStorage.getItem(CFG));}catch{return null;}};
 const saveConf=(u,k)=>localStorage.setItem(CFG,JSON.stringify({url:u,key:k}));
 function initSB(){const c=getConf();if(!c?.url||!c?.key)return false;try{sb=window.supabase.createClient(c.url,c.key);return true;}catch{return false;}}
@@ -213,7 +216,6 @@ const v=id=>document.getElementById(id)?.value||'';
 const esc=s=>String(s||'').replace(/['"<>&]/g,c=>({'\'':'&#39;','"':'&quot;','<':'&lt;','>':'&gt;','&':'&amp;'}[c]));
 const icon=(d,s=15)=>`<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="${d}"/></svg>`;
 
-// ── حساب آخر يوم في الشهر بشكل صحيح ──────────────────
 function getMonthEnd(rptMonth){
   const d=new Date(rptMonth+'-01');
   d.setMonth(d.getMonth()+1);
@@ -459,7 +461,6 @@ async function openPatient(id){
   const drName=USER?.user_metadata?.name||'';
   let paysQ=sb.from('payments').select('*').eq('patient_id',id).order('date',{ascending:false});
   if(ROLE==='doctor') paysQ=paysQ.eq('doctor_name',drName);
-
   const[{data:p},{data:pays},{data:files},{data:appts},{data:teeth},{data:plans}]=await Promise.all([
     sb.from('patients').select('*').eq('id',id).single(),
     paysQ,
@@ -475,7 +476,6 @@ async function openPatient(id){
   const tCls=n=>{const t=toothMap[n];if(!t)return'';return{extracted:'extracted',implant:'implant',needs:'needs',planned:'planned',treated:'treated',crown_needed:'crown_needed'}[t.status]||'';};
   const tIco=n=>{const t=toothMap[n];if(!t)return'';return{extracted:'✕',implant:'▪',needs:'!',planned:'○',treated:'✓',crown_needed:'👑'}[t.status]||'';};
   const tb=n=>`<button class="tooth-btn ${tCls(n)}" onclick="openToothModal('${id}','${n}','${esc(p.name)}')" title="${toothMap[n]?esc(toothMap[n].treatment||''):'سن '+n}"><span style="font-size:8px">${n}</span><span style="font-size:9px">${tIco(n)}</span></button>`;
-
   const photoHtml=(cat)=>{
     const filtered=cat==='all'?(files||[]):(files||[]).filter(f=>f.category===cat);
     return `<div class="photo-tabs">
@@ -492,7 +492,6 @@ async function openPatient(id){
       </div>`).join('')}
     </div>`;
   };
-
   document.getElementById('pg-content').innerHTML=`
     <button class="btn btn-ghost" style="margin-bottom:12px;font-size:12.5px" onclick="renderPatients()">← رجوع</button>
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px">
@@ -516,7 +515,6 @@ async function openPatient(id){
         ${ROLE==='admin'?`<button class="btn btn-danger btn-sm" onclick="deletePatient('${id}','${esc(p.name)}')">🗑</button>`:''}
       </div>
     </div>
-
     ${p.is_smoker||p.has_allergy||p.has_diabetes||p.has_hypertension||p.has_heart_disease?`
     <div class="alert a-warn" style="margin-bottom:14px">
       <div style="font-weight:700;margin-bottom:4px">⚠️ تنبيهات طبية</div>
@@ -528,7 +526,6 @@ async function openPatient(id){
         ${p.has_heart_disease?'<span>🫀 قلب</span>':''}
       </div>
     </div>`:''}
-
     <div class="tooth-chart">
       <h4>🦷 خريطة الأسنان</h4>
       <div class="teeth-grid">
@@ -577,7 +574,6 @@ async function openPatient(id){
           </tr>`).join('')}</tbody>
         </table></div>`:''}
     </div>
-
     <div class="rx-section">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
         <h4 style="font-size:10px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.5px">📋 خطط العلاج</h4>
@@ -601,7 +597,7 @@ async function openPatient(id){
                 <input type="checkbox" ${item.status==='done'?'checked':''} onchange="togglePlanItem('${pl.id}','${id}',${i},this.checked)" style="width:auto;accent-color:var(--teal)">
                 <div style="flex:1">
                   <div style="font-size:12.5px;font-weight:600">${esc(item.service||'')}</div>
-                  ${item.tooth?`<div style="font-size:10.5px;color:var(--muted)">سن #${item.tooth}</div>`:''}
+                  ${(item.teeth||item.tooth)?`<div style="font-size:10.5px;color:var(--muted)">🦷 ${esc(item.teeth||('#'+item.tooth))}</div>`:''}
                 </div>
                 <div style="text-align:left">
                   <div style="font-size:12px;color:var(--teal);font-weight:700">${item.cost?fmt(item.cost):''}</div>
@@ -615,7 +611,6 @@ async function openPatient(id){
           </div>
         </div>`).join('')}
     </div>
-
     <div class="detail-grid">
       <div class="info-section">
         <h4>معلومات المريض</h4>
@@ -648,7 +643,6 @@ async function openPatient(id){
         </div>
       </div>
     </div>
-
     <div class="detail-grid">
       <div>
         <div class="tbl-wrap">
@@ -656,7 +650,7 @@ async function openPatient(id){
           <table><thead><tr><th>التاريخ</th><th>الخدمة</th><th>السن</th><th>الكلي</th><th>المدفوع</th><th>المتبقي</th><th>رضى</th>${ROLE==='admin'?'<th></th>':ROLE==='reception'?'<th>تحصيل</th>':''}</tr></thead>
           <tbody>${(pays||[]).map(x=>`<tr>
             <td>${x.date}</td><td>${esc(x.service||'—')}</td>
-            <td>${x.tooth_number?`<span class="badge bb">#${x.tooth_number}</span>`:'—'}</td>
+            <td>${x.tooth_number?`<span class="badge bb">${esc(String(x.tooth_number))}</span>`:'—'}</td>
             <td>${fmt(x.total_amount)}</td>
             <td style="color:var(--success);font-weight:700">${fmt(x.paid_amount)}</td>
             <td>${x.remaining>0?`<span style="color:var(--danger);font-weight:700">${fmt(x.remaining)}</span>`:'<span class="badge bg">✓</span>'}</td>
@@ -682,15 +676,14 @@ async function openPatient(id){
 }
 
 window.filterPhotos=function(pid,cat){openPatient(pid);}
-
 function ir(k,vv){return `<div class="info-row"><span class="k">${k}</span><span class="v">${vv}</span></div>`}
 
-// ── Treatment Plans ───────────────────────────────────
+// ── Treatment Plans ── تعديل: dropdown خدمات + متعدد أسنان + حفظ مضمون ──
 function modalAddPlan(pid,pname){
   modal(`خطة علاج — ${pname}`,`
-    <div class="form-group"><label>عنوان الخطة</label><input id="pl-title" placeholder="مثال: خطة تقويم شاملة"></div>
+    <div class="form-group"><label>عنوان الخطة</label><input id="pl-title" placeholder="مثال: خطة زراعة شاملة"></div>
     <div id="pl-items" style="margin-bottom:12px"></div>
-    <button class="btn btn-outline btn-sm" onclick="addPlanItem()" style="width:100%;justify-content:center">+ إضافة خدمة</button>
+    <button class="btn btn-outline btn-sm" onclick="addPlanItem()" style="width:100%;justify-content:center;margin-bottom:10px">+ إضافة خدمة</button>
     <div class="form-actions">
       <button class="btn btn-outline" onclick="closeModal()">إلغاء</button>
       <button class="btn btn-primary" onclick="savePlan('${pid}')">حفظ الخطة</button>
@@ -698,32 +691,44 @@ function modalAddPlan(pid,pname){
   addPlanItem();
 }
 
-let planItems=[];
 function addPlanItem(){
-  planItems=planItems||[];
-  const svcs=['حشو','تلبيس','علاج عصب','خلع','زراعة','تقويم','تبييض','فينير','تنظيف','جسر'];
+  const opts=SERVICES.map(s=>`<option value="${s}">${s}</option>`).join('');
   const div=document.createElement('div');
-  div.style.cssText='display:grid;grid-template-columns:1fr 60px 100px auto;gap:6px;margin-bottom:7px;align-items:center';
+  div.className='plan-row-item';
+  div.style.cssText='background:#f8fafc;border:1px solid var(--border);border-radius:8px;padding:9px 10px;margin-bottom:8px';
   div.innerHTML=`
-    <select class="pl-svc" style="padding:7px 8px;border:1.5px solid var(--border);border-radius:7px;font-family:'Cairo',sans-serif;font-size:12px"><option value="">الخدمة</option>${svcs.map(s=>`<option>${s}</option>`).join('')}</select>
-    <input class="pl-tooth" type="number" placeholder="سن" min="11" max="48" style="padding:7px 8px;border:1.5px solid var(--border);border-radius:7px;font-family:'Cairo',sans-serif;font-size:12px">
-    <input class="pl-cost" type="number" placeholder="التكلفة" style="padding:7px 8px;border:1.5px solid var(--border);border-radius:7px;font-family:'Cairo',sans-serif;font-size:12px">
-    <button class="btn btn-danger btn-sm" onclick="this.parentElement.remove()">✕</button>`;
+    <div style="display:grid;grid-template-columns:1fr auto;gap:6px;margin-bottom:7px;align-items:center">
+      <select class="pl-svc" style="padding:7px 8px;border:1.5px solid var(--border);border-radius:7px;font-family:'Cairo',sans-serif;font-size:12px;background:#fff">
+        <option value="">اختر الخدمة</option>${opts}
+      </select>
+      <button class="btn btn-danger btn-sm" onclick="this.closest('.plan-row-item').remove()">✕</button>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+      <div>
+        <div style="font-size:10px;font-weight:700;color:var(--muted);margin-bottom:4px">الأسنان (16,17 أو A,B أو فك كامل)</div>
+        <input class="pl-teeth" placeholder="16 / A / 16,17 / فك كامل" style="width:100%;padding:7px 8px;border:1.5px solid var(--border);border-radius:7px;font-family:'Cairo',sans-serif;font-size:12px;background:#fff">
+      </div>
+      <div>
+        <div style="font-size:10px;font-weight:700;color:var(--muted);margin-bottom:4px">التكلفة (د.ع)</div>
+        <input class="pl-cost" type="number" placeholder="0" style="width:100%;padding:7px 8px;border:1.5px solid var(--border);border-radius:7px;font-family:'Cairo',sans-serif;font-size:12px;background:#fff">
+      </div>
+    </div>`;
   document.getElementById('pl-items').appendChild(div);
 }
 
 async function savePlan(pid){
   const title=v('pl-title')||'خطة علاج';
-  const rows=document.getElementById('pl-items').querySelectorAll('div');
+  const rows=document.getElementById('pl-items').querySelectorAll('.plan-row-item');
   const items=[];
   rows.forEach(row=>{
     const svc=row.querySelector('.pl-svc')?.value;
-    const tooth=row.querySelector('.pl-tooth')?.value;
+    const teeth=row.querySelector('.pl-teeth')?.value?.trim();
     const cost=Number(row.querySelector('.pl-cost')?.value||0);
-    if(svc)items.push({service:svc,tooth:tooth||null,cost,status:'pending'});
+    if(svc)items.push({service:svc,teeth:teeth||null,cost,status:'pending'});
   });
   if(!items.length){alert('أضف خدمة واحدة على الأقل');return;}
-  await sb.from('treatment_plans').insert({patient_id:pid,title,items});
+  const{error}=await sb.from('treatment_plans').insert({patient_id:pid,title,items});
+  if(error){alert('خطأ في الحفظ: '+error.message);return;}
   closeModal();openPatient(pid);
 }
 
@@ -753,7 +758,6 @@ function printRx(pid,pname){
       <button class="btn btn-primary" onclick="doPrint('${esc(pname)}')">🖨 طباعة</button>
     </div>`);
 }
-
 function doPrint(pname){
   const drugs=v('rx-drugs'),inst=v('rx-inst'),dr=v('rx-dr');
   const win=window.open('','_blank');
@@ -770,8 +774,7 @@ function doPrint(pname){
   <h3>تعليمات ما بعد العلاج</h3><p>${inst||'—'}</p>
   <div class="footer"><span>الطبيب: ${dr}</span><span>${todayStr()}</span></div>
   <script>window.onload=()=>window.print()<\/script></body></html>`);
-  win.document.close();
-  closeModal();
+  win.document.close();closeModal();
 }
 
 // ── WhatsApp ──────────────────────────────────────────
@@ -792,7 +795,6 @@ function sendWhatsApp(phone,pname){
     </div>`);
   updateWaMsg('appt',pname);
 }
-
 function updateWaMsg(type,pname){
   const msgs={
     appt:`السلام عليكم ${pname}،\nنذكركم بموعدكم في عيادات ڤيرونا غداً.\nنرجو الحضور في الوقت المحدد.\nشكراً 🦷`,
@@ -803,7 +805,6 @@ function updateWaMsg(type,pname){
   const el=document.getElementById('wa-msg');
   if(el)el.value=msgs[type]||'';
 }
-
 function openWa(phone){
   const msg=v('wa-msg');
   const clean=phone.replace(/\D/g,'');
@@ -814,9 +815,9 @@ function openWa(phone){
 
 // ── Tooth Modal ───────────────────────────────────────
 function openToothModal(pid,n,pname){
-  const t=['حشو','تلبيس','علاج عصب','خلع','زراعة','تقويم','تبييض','ترميم','فينير','جسر','أخرى'];
+  const opts=SERVICES.map(x=>`<option>${x}</option>`).join('');
   modal(`سن #${n} — ${pname}`,`
-    <div class="form-group"><label>نوع العلاج</label><select id="tt"><option value="">اختر</option>${t.map(x=>`<option>${x}</option>`).join('')}</select></div>
+    <div class="form-group"><label>نوع العلاج</label><select id="tt"><option value="">اختر</option>${opts}</select></div>
     <div class="form-group"><label>الحالة</label>
       <select id="ts">
         <option value="treated">تم العلاج</option>
@@ -836,7 +837,6 @@ function openToothModal(pid,n,pname){
       <button class="btn btn-primary" onclick="saveTooth('${pid}','${n}')">حفظ</button>
     </div>`);
 }
-
 async function saveTooth(pid,n){
   const treatment=v('tt'),status=v('ts'),cost=Number(v('tc')||0),doctor_name=v('tdr').trim(),notes=v('tn').trim();
   const{data:ex}=await sb.from('tooth_records').select('id').eq('patient_id',pid).eq('tooth_number',n).maybeSingle();
@@ -886,7 +886,6 @@ function modalAddPatient(){
       <button class="btn btn-primary" onclick="savePatient()">حفظ</button>
     </div>`);
 }
-
 async function savePatient(){
   const name=v('pn').trim();if(!name){alert('أدخل الاسم');return;}
   const{count}=await sb.from('patients').select('*',{count:'exact',head:true});
@@ -906,7 +905,6 @@ async function savePatient(){
   });
   closeModal();PT_PAGE=1;renderPatients();
 }
-
 async function modalEditPatient(pid){
   const{data:p}=await sb.from('patients').select('*').eq('id',pid).single();if(!p)return;
   const srcs=['إنستغرام','فيسبوك','جوجل','توصية','مراجع آخر','إعلان','مررت بالمركز','أخرى'];
@@ -927,13 +925,11 @@ async function modalEditPatient(pid){
       <button class="btn btn-primary" onclick="saveEditPatient('${pid}')">حفظ</button>
     </div>`);
 }
-
 async function saveEditPatient(pid){
   const name=v('ep-n').trim();if(!name){alert('أدخل الاسم');return;}
   await sb.from('patients').update({name,phone:v('ep-p').trim(),dob:v('ep-d')||null,address:v('ep-a').trim(),acquisition_source:v('ep-src'),source_page:v('ep-sp').trim(),notes:v('ep-no').trim()}).eq('id',pid);
   closeModal();openPatient(pid);
 }
-
 function modalEditFollowup(pid,date,note,refused){
   modal('تعديل المتابعة',`
     <div class="form-group"><label>تاريخ المتابعة</label><input id="fud" type="date" value="${date}"></div>
@@ -950,7 +946,6 @@ async function saveFollowup(pid){
   await sb.from('patients').update({followup_date:v('fud')||null,followup_note:v('fun').trim(),refused_treatment:document.getElementById('fref')?.checked||false}).eq('id',pid);
   closeModal();openPatient(pid);
 }
-
 function modalEditMedical(pid,d){
   if(typeof d==='string')try{d=JSON.parse(d);}catch{d={};}
   modal('المعلومات الطبية',`
@@ -973,7 +968,6 @@ async function saveMedical(pid){
   await sb.from('patients').update({is_smoker:document.getElementById('m-smoker').checked,has_allergy:document.getElementById('m-allergy').checked,allergy_details:v('m-ad').trim(),has_diabetes:document.getElementById('m-diabetes').checked,has_hypertension:document.getElementById('m-hyper').checked,has_heart_disease:document.getElementById('m-heart').checked,chronic_notes:v('m-cn').trim()}).eq('id',pid);
   closeModal();openPatient(pid);
 }
-
 async function deletePatient(id,name){
   if(!confirm(`حذف "${name}" نهائياً؟\nسيتم حذف كل بياناته.`))return;
   await sb.from('patients').delete().eq('id',id);
@@ -1031,7 +1025,6 @@ async function renderAppts(){
       </tr>`).join('')||nr(7)}</tbody></table>
     </div>`;
 }
-
 function modalAddApptSingle(pid,pname){modalAddAppt([`${pid}|${pname}`],pid);}
 function modalAddAppt(ptArr,fixId=''){
   const svcs=['تنظيف','حشو','تقويم','زراعة','تجميل','خلع','علاج عصب','تيجان','تبييض','أخرى'];
@@ -1062,13 +1055,10 @@ async function saveAppt(fixId=''){
 }
 async function updAppt(id,status){await sb.from('appointments').update({status}).eq('id',id);}
 
-// ── Payments ──────────────────────────────────────────
+// ── Payments ── تعديل: dropdown خدمة + نص حر للسن ───────────────────────
 async function renderPayments(){
   let q=sb.from('payments').select('*').order('date',{ascending:false}).order('created_at',{ascending:false});
-  if(ROLE==='doctor'){
-    const drName=USER?.user_metadata?.name||'';
-    q=q.eq('doctor_name',drName);
-  }
+  if(ROLE==='doctor'){const drName=USER?.user_metadata?.name||'';q=q.eq('doctor_name',drName);}
   const{data:pays}=await q;
   document.getElementById('pg-content').innerHTML=`
     <div style="display:flex;justify-content:flex-end;margin-bottom:13px">
@@ -1087,23 +1077,29 @@ async function renderPayments(){
       </tr>`).join('')||nr(ROLE==='admin'?8:7)}</tbody></table>
     </div>`;
 }
-
 async function modalPayGlobal(){
   const{data:pts}=await sb.from('patients').select('id,name').order('name').limit(300);
   modalAddPayment('','',pts||[]);
 }
-
 function modalAddPayment(fixId='',fixName='',pts=[]){
   const drName=USER?.user_metadata?.name||'';
   const isDoctor=ROLE==='doctor';
+  const svcOpts=SERVICES.map(s=>`<option value="${s}">${s}</option>`).join('');
   modal('تسجيل دفعة',`
     <div class="form-group"><label>المريض *</label>
       ${fixId?`<input value="${esc(fixName)}" readonly style="background:#f8fafc;color:var(--muted)">`:
         `<select id="pay-p"><option value="">اختر</option>${pts.map(p=>`<option value="${p.id}|${p.name}">${p.name}</option>`).join('')}</select>`}
     </div>
-    <div class="form-group"><label>الخدمة *</label><input id="pay-s" placeholder="تقويم، زراعة..."></div>
+    <div class="form-group"><label>الخدمة *</label>
+      <select id="pay-s" style="width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12.5px;font-family:'Cairo',sans-serif;color:var(--text);outline:none;background:#fff">
+        <option value="">اختر الخدمة</option>${svcOpts}
+      </select>
+    </div>
     <div class="form-row">
-      <div class="form-group"><label>رقم السن</label><input id="pay-tooth" type="number" placeholder="مثال: 16" min="11" max="48"></div>
+      <div class="form-group">
+        <label>السن / الأسنان <span style="font-size:10px;color:var(--muted)">(16 أو A أو فك كامل)</span></label>
+        <input id="pay-tooth" placeholder="16 / A / فك كامل / 16,17">
+      </div>
       <div class="form-group"><label>الطبيب</label><input id="pay-dr" value="${esc(drName)}" ${isDoctor?'readonly style="background:#f8fafc;color:var(--teal);font-weight:700"':''}></div>
     </div>
     <div class="form-row">
@@ -1126,13 +1122,11 @@ function modalAddPayment(fixId='',fixName='',pts=[]){
       <button class="btn btn-primary" onclick="savePay('${fixId}','${esc(fixName)}')">حفظ</button>
     </div>`);
 }
-
 function calcRem(){
   const t=Number(document.getElementById('pay-total')?.value||0),p=Number(document.getElementById('pay-paid')?.value||0),r=Math.max(0,t-p);
   const el=document.getElementById('pay-rem-info');
   if(el){el.textContent=`المتبقي: ${r.toLocaleString('ar-IQ')} د.ع`;el.className=`alert ${r>0?'a-warn':'a-ok'}`;}
 }
-
 function setSatisfaction(n){
   document.getElementById('pay-sat').value=n;
   [1,2,3,4,5,6,7,8,9,10].forEach(i=>{
@@ -1141,32 +1135,33 @@ function setSatisfaction(n){
     else{btn.style.background='#f8fafc';btn.style.color='var(--text)';btn.style.borderColor='var(--border)';}
   });
 }
-
 async function savePay(fixId,fixName){
   let pid=fixId,pname=fixName;
   if(!pid){const pv=v('pay-p');if(!pv){alert('اختر مريضاً');return;}[pid,pname]=pv.split('|');}
   const total=Number(v('pay-total')||0),paid=Number(v('pay-paid')||0),remaining=Math.max(0,total-paid);
-  const service=v('pay-s').trim();if(!service){alert('أدخل الخدمة');return;}
+  // الخدمة من dropdown
+  const service=(document.getElementById('pay-s')?.value||'').trim();
+  if(!service){alert('اختر الخدمة');return;}
   const drName=USER?.user_metadata?.name||document.getElementById('pay-dr')?.value?.trim()||'غير محدد';
   const sat=v('pay-sat');
+  // السن: نص حر يقبل أرقام وحروف وعبارات
+  const toothVal=document.getElementById('pay-tooth')?.value?.trim()||null;
   await sb.from('payments').insert({
     patient_id:pid,patient_name:pname,service,
     total_amount:total,paid_amount:paid,remaining,
     date:v('pay-date'),
     doctor_name:drName,
-    tooth_number:v('pay-tooth')||null,
+    tooth_number:toothVal,
     notes:v('pay-n').trim(),
     recorded_by:USER?.email,
     satisfaction_score:sat?Number(sat):null
   });
   closeModal();renderPage(CUR);
 }
-
 async function saveSatisfaction(pid,score){
   await sb.from('patients').update({satisfaction_score:score}).eq('id',pid);
   openPatient(pid);
 }
-
 function modalCollectRemaining(payId,patientId,remaining,service){
   modal(`تحصيل المتبقي — ${service}`,`
     <div class="alert a-warn">المبلغ المتبقي: <strong>${fmt(Number(remaining))}</strong></div>
@@ -1179,7 +1174,6 @@ function modalCollectRemaining(payId,patientId,remaining,service){
       <button class="btn btn-success" onclick="saveCollectRemaining('${payId}','${patientId}','${remaining}')">✓ تأكيد التحصيل</button>
     </div>`);
 }
-
 async function saveCollectRemaining(payId,patientId,oldRemaining){
   const collected=Number(v('cr-amount')||0);
   if(!collected||collected<=0){alert('أدخل المبلغ');return;}
@@ -1190,11 +1184,15 @@ async function saveCollectRemaining(payId,patientId,oldRemaining){
   await sb.from('payments').update({paid_amount:newPaid,remaining:newRemaining}).eq('id',payId);
   closeModal();openPatient(patientId);
 }
-
 async function modalEditPayment(payId,patientId){
   const{data:pay}=await sb.from('payments').select('*').eq('id',payId).single();if(!pay)return;
+  const svcOpts=SERVICES.map(s=>`<option value="${s}" ${pay.service===s?'selected':''}>${s}</option>`).join('');
   modal('تعديل الدفعة',`
-    <div class="form-group"><label>الخدمة *</label><input id="ep-svc" value="${esc(pay.service||'')}"></div>
+    <div class="form-group"><label>الخدمة *</label>
+      <select id="ep-svc" style="width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12.5px;font-family:'Cairo',sans-serif;background:#fff">
+        <option value="">اختر</option>${svcOpts}
+      </select>
+    </div>
     <div class="form-row">
       <div class="form-group"><label>المبلغ الكلي</label><input id="ep-total" type="number" value="${pay.total_amount||0}" oninput="calcRemEdit()"></div>
       <div class="form-group"><label>المدفوع</label><input id="ep-paid" type="number" value="${pay.paid_amount||0}" oninput="calcRemEdit()"></div>
@@ -1210,20 +1208,17 @@ async function modalEditPayment(payId,patientId){
       <button class="btn btn-primary" onclick="saveEditPayment('${payId}','${patientId}')">حفظ</button>
     </div>`);
 }
-
 function calcRemEdit(){
   const t=Number(document.getElementById('ep-total')?.value||0),p=Number(document.getElementById('ep-paid')?.value||0),r=Math.max(0,t-p);
   const el=document.getElementById('ep-rem-info');
   if(el){el.textContent=`المتبقي: ${r.toLocaleString('ar-IQ')} د.ع`;el.className=`alert ${r>0?'a-warn':'a-ok'}`;}
 }
-
 async function saveEditPayment(payId,patientId){
-  const svc=v('ep-svc').trim();if(!svc){alert('أدخل الخدمة');return;}
+  const svc=(document.getElementById('ep-svc')?.value||'').trim();if(!svc){alert('اختر الخدمة');return;}
   const total=Number(v('ep-total')||0),paid=Number(v('ep-paid')||0),remaining=Math.max(0,total-paid);
   await sb.from('payments').update({service:svc,total_amount:total,paid_amount:paid,remaining,date:v('ep-date'),doctor_name:v('ep-dr').trim(),notes:v('ep-note').trim()}).eq('id',payId);
   closeModal();if(patientId)openPatient(patientId);else renderPayments();
 }
-
 async function deletePayment(payId,patientId){
   if(!confirm('حذف هذه الدفعة؟'))return;
   await sb.from('payments').delete().eq('id',payId);
@@ -1241,7 +1236,6 @@ async function renderDebts(){
   });
   const list=Object.entries(map).sort((a,b)=>b[1].total-a[1].total);
   const grandTotal=list.reduce((s,[,d])=>s+d.total,0);
-
   document.getElementById('pg-content').innerHTML=`
     <div class="cards" style="grid-template-columns:repeat(3,1fr);margin-bottom:18px">
       <div class="card" style="border-right-color:var(--danger)"><div class="lbl">إجمالي الديون</div><div class="val" style="font-size:16px;color:var(--danger)">${fmt(grandTotal)}</div></div>
@@ -1271,7 +1265,6 @@ async function renderExpenses(){
   const mkt=(exps||[]).filter(e=>e.is_marketing).reduce((s,e)=>s+e.amount,0);
   const catMap={};(exps||[]).forEach(e=>{if(!catMap[e.category])catMap[e.category]=0;catMap[e.category]+=e.amount;});
   const catList=Object.entries(catMap).sort((a,b)=>b[1]-a[1]).slice(0,5);
-
   document.getElementById('pg-content').innerHTML=`
     <div class="cards" style="grid-template-columns:repeat(3,1fr)">
       <div class="card" style="border-right-color:var(--danger)"><div class="lbl">إجمالي المصاريف</div><div class="val" style="font-size:16px;color:var(--danger)">${fmt(total)}</div></div>
@@ -1303,7 +1296,6 @@ async function renderExpenses(){
       </tr>`).join('')||nr(5)}</tbody></table>
     </div>`;
 }
-
 function modalAddExp(){
   const cats=['مستلزمات طبية','رواتب','إيجار','كهرباء','ماء','إنترنت','صيانة','إعلانات','تسويق رقمي','🔬 مختبر أسنان','🦷 شركة زراعة','🏢 مكتب أسنان','💊 أدوية ومخدرات','🛠 معدات وأجهزة','أخرى'];
   modal('إضافة مصروف',`
@@ -1329,10 +1321,9 @@ async function saveExp(){
 }
 
 // ── Doctor Stats ──────────────────────────────────────
-// الإصلاح: استخدام getMonthEnd() بدل hardcode '-31'
 async function renderDoctors(){
   const mo=RPT_MONTH+'-01';
-  const moEnd=getMonthEnd(RPT_MONTH); // ✅ إصلاح: آخر يوم صحيح في الشهر
+  const moEnd=getMonthEnd(RPT_MONTH);
   const months=[];const d=new Date();for(let i=0;i<12;i++){const y=d.getFullYear(),m=String(d.getMonth()+1).padStart(2,'0');months.push(y+'-'+m);d.setMonth(d.getMonth()-1);}
   const getDrPct=(name)=>Number(localStorage.getItem('dr_pct_'+name)||40);
   const[{data:pays},{data:allPays}]=await Promise.all([
@@ -1343,13 +1334,10 @@ async function renderDoctors(){
   (pays||[]).forEach(p=>{
     const dr=p.doctor_name||'غير محدد';
     if(!map[dr])map[dr]={income:0,patients:new Set(),sessions:0,services:{}};
-    map[dr].income+=p.paid_amount||0;
-    map[dr].patients.add(p.patient_id);
-    map[dr].sessions++;
+    map[dr].income+=p.paid_amount||0;map[dr].patients.add(p.patient_id);map[dr].sessions++;
     const svc=p.service||'أخرى';
     if(!map[dr].services[svc])map[dr].services[svc]={count:0,income:0};
-    map[dr].services[svc].count++;
-    map[dr].services[svc].income+=p.paid_amount||0;
+    map[dr].services[svc].count++;map[dr].services[svc].income+=p.paid_amount||0;
   });
   const returnMap={};
   (allPays||[]).forEach(p=>{
@@ -1373,8 +1361,7 @@ async function renderDoctors(){
         <thead><tr><th>الطبيب</th><th>الإيرادات</th><th>المرضى</th><th>الجلسات</th><th>معدل العودة</th><th>نسبة %</th><th>حصة الطبيب</th><th>حصة المركز</th></tr></thead>
         <tbody>${drList.map(([dr,d])=>{
           const pct=getDrPct(dr),drShare=Math.round(d.income*pct/100),clinicShare=d.income-drShare;
-          const retRate=getReturnRate(dr);
-          const maxIncome=Math.max(...Object.values(map).map(x=>x.income));
+          const retRate=getReturnRate(dr);const maxIncome=Math.max(...Object.values(map).map(x=>x.income));
           return '<tr><td style="font-weight:800">'+dr+'</td><td><div style="display:flex;align-items:center;gap:6px"><div style="width:60px;height:6px;background:var(--border);border-radius:3px;overflow:hidden"><div style="width:'+(maxIncome>0?Math.round(d.income/maxIncome*100):0)+'%;height:100%;background:var(--teal);border-radius:3px"></div></div><strong style="color:var(--success)">'+(d.income.toLocaleString('ar-IQ'))+' د.ع</strong></div></td><td><strong>'+d.patients.size+'</strong></td><td>'+d.sessions+'</td><td><span style="color:'+(retRate>=50?'var(--success)':retRate>=30?'var(--warning)':'var(--danger)')+';font-weight:700">'+retRate+'%</span></td><td><div style="display:flex;align-items:center;gap:5px"><input type="number" value="'+pct+'" min="0" max="100" style="width:55px;padding:3px 6px;border:1.5px solid var(--border);border-radius:6px;font-family:Cairo,sans-serif;font-size:12px;text-align:center" onchange="saveDrPct(this.dataset.dr,this.value);renderDoctors()" data-dr="'+dr+'"><span style="font-size:10px;color:var(--muted)">%</span></div></td><td style="color:var(--teal);font-weight:800">'+(drShare.toLocaleString('ar-IQ'))+' د.ع</td><td style="color:var(--navy);font-weight:700">'+(clinicShare.toLocaleString('ar-IQ'))+' د.ع</td></tr>';
         }).join('')||'<tr><td colspan="8" style="text-align:center;padding:26px;color:var(--muted)">لا توجد بيانات</td></tr>'}
         </tbody>
@@ -1407,18 +1394,12 @@ async function renderDoctors(){
       }).join('')}
     </div>`:''}`;
 }
-
-function saveDrPct(name,pct){
-  localStorage.setItem('dr_pct_'+name,Math.min(100,Math.max(0,Number(pct)||0)));
-}
+function saveDrPct(name,pct){localStorage.setItem('dr_pct_'+name,Math.min(100,Math.max(0,Number(pct)||0)));}
 
 // ── Reports ───────────────────────────────────────────
-// الإصلاح: استخدام getMonthEnd() بدل hardcode '-31'
 async function renderReports(){
-  const mo=RPT_MONTH+'-01';
-  const moEnd=getMonthEnd(RPT_MONTH); // ✅ إصلاح: آخر يوم صحيح في الشهر
+  const mo=RPT_MONTH+'-01';const moEnd=getMonthEnd(RPT_MONTH);
   const months=[];const d=new Date();for(let i=0;i<12;i++){const y=d.getFullYear(),m=String(d.getMonth()+1).padStart(2,'0');months.push(`${y}-${m}`);d.setMonth(d.getMonth()-1);}
-
   const[{data:allPays},{data:moPays},{data:exps},{data:moExps},{count:totalPts},{count:newPts},{data:moPatients}]=await Promise.all([
     sb.from('payments').select('paid_amount,patient_id'),
     sb.from('payments').select('*').gte('date',mo).lte('date',moEnd),
@@ -1441,17 +1422,10 @@ async function renderReports(){
   const srcMap={};(moPatients||[]).forEach(p=>{const src=p.source_page||p.acquisition_source||'غير محدد';if(!srcMap[src])srcMap[src]=0;srcMap[src]++;});
   const srcList=Object.entries(srcMap).sort((a,b)=>b[1]-a[1]);
   const moPaidPts=[...new Set((moPays||[]).map(p=>p.patient_id))].length;
-
   const{data:allPatients}=await sb.from('patients').select('acquisition_source,source_page');
-  const allSrcMap={};
-  (allPatients||[]).forEach(p=>{
-    const src=p.source_page||p.acquisition_source||'غير محدد';
-    if(!allSrcMap[src])allSrcMap[src]=0;
-    allSrcMap[src]++;
-  });
+  const allSrcMap={};(allPatients||[]).forEach(p=>{const src=p.source_page||p.acquisition_source||'غير محدد';if(!allSrcMap[src])allSrcMap[src]=0;allSrcMap[src]++;});
   const allSrcList=Object.entries(allSrcMap).sort((a,b)=>b[1]-a[1]);
   const allTotal=(allPatients||[]).length;
-
   document.getElementById('pg-content').innerHTML=`
     <div style="display:flex;align-items:center;gap:10px;margin-bottom:18px;flex-wrap:wrap">
       <label style="font-size:13px;font-weight:700">📅 الشهر:</label>
@@ -1468,34 +1442,21 @@ async function renderReports(){
       <div class="card" style="border-right-color:var(--warning)"><div class="lbl">🎯 CAC</div><div class="val" style="font-size:15px">${fmt(cac)}</div></div>
     </div>
     <div class="report-grid">
-      <div class="rc">
-        <h3>📣 مصادر المرضى الجدد — ${RPT_MONTH}</h3>
-        ${srcList.length>0?srcList.map(([src,cnt])=>`<div class="metric-row">
-          <span style="font-size:12px;font-weight:600">${esc(src)}</span>
-          <div style="display:flex;align-items:center;gap:7px">
-            <div style="width:80px;height:7px;background:var(--border);border-radius:4px"><div style="width:${Math.round(cnt/(newPts||1)*100)}%;height:100%;background:var(--teal);border-radius:4px"></div></div>
-            <strong>${cnt}</strong><span style="color:var(--muted);font-size:10.5px">${Math.round(cnt/(newPts||1)*100)}%</span>
-          </div>
-        </div>`).join(''):`<div style="text-align:center;color:var(--muted);padding:18px;font-size:12px">لا مرضى جدد</div>`}
+      <div class="rc"><h3>📣 مصادر المرضى الجدد — ${RPT_MONTH}</h3>
+        ${srcList.length>0?srcList.map(([src,cnt])=>`<div class="metric-row"><span style="font-size:12px;font-weight:600">${esc(src)}</span><div style="display:flex;align-items:center;gap:7px"><div style="width:80px;height:7px;background:var(--border);border-radius:4px"><div style="width:${Math.round(cnt/(newPts||1)*100)}%;height:100%;background:var(--teal);border-radius:4px"></div></div><strong>${cnt}</strong><span style="color:var(--muted);font-size:10.5px">${Math.round(cnt/(newPts||1)*100)}%</span></div></div>`).join(''):`<div style="text-align:center;color:var(--muted);padding:18px;font-size:12px">لا مرضى جدد</div>`}
       </div>
-      <div class="rc">
-        <h3>💳 المدفوعات — ${RPT_MONTH}</h3>
+      <div class="rc"><h3>💳 المدفوعات — ${RPT_MONTH}</h3>
         <div style="max-height:280px;overflow-y:auto">
-          ${(moPays||[]).length>0?`<table style="width:100%;border-collapse:collapse">
-            <thead><tr>${['المريض','الخدمة','المدفوع'].map(h=>`<th style="text-align:right;padding:5px 8px;font-size:10px;color:var(--muted);border-bottom:1px solid var(--border)">${h}</th>`).join('')}</tr></thead>
-            <tbody>${(moPays||[]).map(p=>`<tr style="border-bottom:1px solid #f1f5f9"><td style="padding:5px 8px;font-size:11.5px;font-weight:600">${esc(p.patient_name||'—')}</td><td style="padding:5px 8px;font-size:10.5px;color:var(--muted)">${esc(p.service||'—')}</td><td style="padding:5px 8px;font-size:11.5px;color:var(--success);font-weight:700">${fmt(p.paid_amount)}</td></tr>`).join('')}</tbody>
-          </table>`:`<div style="text-align:center;color:var(--muted);padding:18px;font-size:12px">لا مدفوعات</div>`}
+          ${(moPays||[]).length>0?`<table style="width:100%;border-collapse:collapse"><thead><tr>${['المريض','الخدمة','المدفوع'].map(h=>`<th style="text-align:right;padding:5px 8px;font-size:10px;color:var(--muted);border-bottom:1px solid var(--border)">${h}</th>`).join('')}</tr></thead><tbody>${(moPays||[]).map(p=>`<tr style="border-bottom:1px solid #f1f5f9"><td style="padding:5px 8px;font-size:11.5px;font-weight:600">${esc(p.patient_name||'—')}</td><td style="padding:5px 8px;font-size:10.5px;color:var(--muted)">${esc(p.service||'—')}</td><td style="padding:5px 8px;font-size:11.5px;color:var(--success);font-weight:700">${fmt(p.paid_amount)}</td></tr>`).join('')}</tbody></table>`:`<div style="text-align:center;color:var(--muted);padding:18px;font-size:12px">لا مدفوعات</div>`}
         </div>
       </div>
-      <div class="rc">
-        <h3>🎯 CAC و LTV</h3>
+      <div class="rc"><h3>🎯 CAC و LTV</h3>
         <div class="big-n">${fmt(cac)}</div><div class="big-l">تكلفة اكتساب مريض</div>
         <div class="formula">تسويق ÷ مرضى جدد<br>${fmt(mktMo)} ÷ ${newPts||0} = ${fmt(cac)}</div>
         <div class="metric-row" style="margin-top:12px"><span style="color:var(--muted);font-size:12px">LTV متوسط المريض</span><strong style="color:var(--teal)">${fmt(ltv)}</strong></div>
         <div class="metric-row"><span style="color:var(--muted);font-size:12px">نسبة LTV/CAC</span><strong style="color:${Number(ltvCac)>=3?'var(--success)':'var(--danger)'}">${ltvCac}x</strong></div>
       </div>
-      <div class="rc">
-        <h3>📈 الملخص الكلي</h3>
+      <div class="rc"><h3>📈 الملخص الكلي</h3>
         <div class="metric-row"><span style="color:var(--muted);font-size:12px">إجمالي المرضى</span><strong>${totalPts||0}</strong></div>
         <div class="metric-row"><span style="color:var(--muted);font-size:12px">إجمالي الإيرادات</span><strong style="color:var(--success)">${fmt(income)}</strong></div>
         <div class="metric-row"><span style="color:var(--muted);font-size:12px">إجمالي المصاريف</span><strong style="color:var(--danger)">${fmt(expTotal)}</strong></div>
@@ -1504,25 +1465,9 @@ async function renderReports(){
     </div>
     <div class="tbl-wrap" style="margin-top:16px">
       <div class="tbl-hdr"><h3>📣 مصادر معرفة المركز — إجمالي ${allTotal} مريض</h3></div>
-      <table>
-        <thead><tr><th>المصدر</th><th>عدد المرضى</th><th>النسبة</th><th>التمثيل البياني</th></tr></thead>
-        <tbody>${allSrcList.map(([src,cnt])=>{
-          const pct=Math.round(cnt/allTotal*100);
-          return`<tr>
-            <td style="font-weight:700">${esc(src)}</td>
-            <td><strong>${cnt}</strong></td>
-            <td><span class="badge ${pct>=20?'bg':pct>=10?'bt':pct>=5?'bb':'bgr'}">${pct}%</span></td>
-            <td style="min-width:150px">
-              <div style="display:flex;align-items:center;gap:8px">
-                <div style="flex:1;height:8px;background:var(--border);border-radius:4px;overflow:hidden">
-                  <div style="width:${pct}%;height:100%;background:var(--teal);border-radius:4px"></div>
-                </div>
-              </div>
-            </td>
-          </tr>`;
-        }).join('')||'<tr><td colspan="4" style="text-align:center;padding:20px;color:var(--muted)">لا توجد بيانات</td></tr>'}
-        </tbody>
-      </table>
+      <table><thead><tr><th>المصدر</th><th>عدد المرضى</th><th>النسبة</th><th>التمثيل البياني</th></tr></thead>
+      <tbody>${allSrcList.map(([src,cnt])=>{const pct=Math.round(cnt/allTotal*100);return`<tr><td style="font-weight:700">${esc(src)}</td><td><strong>${cnt}</strong></td><td><span class="badge ${pct>=20?'bg':pct>=10?'bt':pct>=5?'bb':'bgr'}">${pct}%</span></td><td style="min-width:150px"><div style="flex:1;height:8px;background:var(--border);border-radius:4px;overflow:hidden"><div style="width:${pct}%;height:100%;background:var(--teal);border-radius:4px"></div></div></td></tr>`;}).join('')||'<tr><td colspan="4" style="text-align:center;padding:20px;color:var(--muted)">لا توجد بيانات</td></tr>'}
+      </tbody></table>
     </div>`;
 }
 
@@ -1533,11 +1478,7 @@ async function renderBD(){
     sb.from('payments').select('patient_id,paid_amount'),
   ]);
   const payMap={};
-  (payments||[]).forEach(p=>{
-    if(!payMap[p.patient_id])payMap[p.patient_id]={total:0,visits:0};
-    payMap[p.patient_id].total+=p.paid_amount||0;
-    payMap[p.patient_id].visits++;
-  });
+  (payments||[]).forEach(p=>{if(!payMap[p.patient_id])payMap[p.patient_id]={total:0,visits:0};payMap[p.patient_id].total+=p.paid_amount||0;payMap[p.patient_id].visits++;});
   const srcMap={};
   (patients||[]).forEach(p=>{
     const src=p.source_page||p.acquisition_source||'غير محدد';
@@ -1549,7 +1490,6 @@ async function renderBD(){
   const srcList=Object.entries(srcMap).sort((a,b)=>b[1].count-a[1].count);
   const totalPts=(patients||[]).length;
   const totalRev=Object.values(srcMap).reduce((s,d)=>s+d.totalRevenue,0);
-
   document.getElementById('pg-content').innerHTML=`
     <div class="cards" style="margin-bottom:20px">
       <div class="card" style="border-right-color:var(--teal)"><div class="lbl">إجمالي المرضى</div><div class="val">${totalPts}</div></div>
@@ -1562,49 +1502,31 @@ async function renderBD(){
       <div style="overflow-x:auto"><table style="min-width:600px">
         <thead><tr><th>المصدر</th><th>عدد المرضى</th><th>% من الكل</th><th>إجمالي الإيراد</th><th>متوسط/مريض (LTV)</th><th>معدل التحويل</th><th>معدل العودة</th></tr></thead>
         <tbody>${srcList.map(([src,d])=>{
-          const pct=Math.round(d.count/totalPts*100);
-          const ltv=d.paying>0?Math.round(d.totalRevenue/d.paying):0;
-          const convRate=d.count>0?Math.round(d.paying/d.count*100):0;
-          const retRate=d.paying>0?Math.round(d.returning/d.paying*100):0;
+          const pct=Math.round(d.count/totalPts*100);const ltv=d.paying>0?Math.round(d.totalRevenue/d.paying):0;
+          const convRate=d.count>0?Math.round(d.paying/d.count*100):0;const retRate=d.paying>0?Math.round(d.returning/d.paying*100):0;
           const maxCount=srcList[0][1].count;
-          return`<tr>
-            <td><div style="font-weight:700">${esc(src)}</div><div style="width:${Math.round(d.count/maxCount*80)}px;height:4px;background:var(--teal);border-radius:2px;margin-top:3px"></div></td>
-            <td><strong>${d.count}</strong></td>
-            <td><span class="badge ${pct>=20?'bg':pct>=10?'bt':'bgr'}">${pct}%</span></td>
-            <td style="color:var(--success);font-weight:700">${fmt(d.totalRevenue)}</td>
-            <td style="color:var(--teal);font-weight:700">${ltv?fmt(ltv):'—'}</td>
-            <td><span style="color:${convRate>=50?'var(--success)':convRate>=30?'var(--warning)':'var(--danger)'};font-weight:700">${convRate}%</span></td>
-            <td><span style="color:${retRate>=40?'var(--success)':retRate>=20?'var(--warning)':'var(--danger)'};font-weight:700">${retRate}%</span></td>
-          </tr>`;
+          return`<tr><td><div style="font-weight:700">${esc(src)}</div><div style="width:${Math.round(d.count/maxCount*80)}px;height:4px;background:var(--teal);border-radius:2px;margin-top:3px"></div></td><td><strong>${d.count}</strong></td><td><span class="badge ${pct>=20?'bg':pct>=10?'bt':'bgr'}">${pct}%</span></td><td style="color:var(--success);font-weight:700">${fmt(d.totalRevenue)}</td><td style="color:var(--teal);font-weight:700">${ltv?fmt(ltv):'—'}</td><td><span style="color:${convRate>=50?'var(--success)':convRate>=30?'var(--warning)':'var(--danger)'};font-weight:700">${convRate}%</span></td><td><span style="color:${retRate>=40?'var(--success)':retRate>=20?'var(--warning)':'var(--danger)'};font-weight:700">${retRate}%</span></td></tr>`;
         }).join('')||nr(7,'لا توجد بيانات')}
         </tbody>
       </table></div>
     </div>
     <div class="report-grid">
-      <div class="rc">
-        <h3>📊 توزيع المرضى حسب المصدر</h3>
+      <div class="rc"><h3>📊 توزيع المرضى حسب المصدر</h3>
         ${srcList.slice(0,8).map(([src,d])=>`<div class="metric-row"><span style="font-size:12px;font-weight:600;min-width:90px">${esc(src)}</span><div style="flex:1;margin:0 8px;height:7px;background:var(--border);border-radius:4px;overflow:hidden"><div style="width:${Math.round(d.count/totalPts*100)}%;height:100%;background:var(--teal);border-radius:4px"></div></div><strong style="font-size:12px;min-width:30px;text-align:left">${d.count}</strong></div>`).join('')}
       </div>
-      <div class="rc">
-        <h3>💰 متوسط قيمة المريض (LTV) حسب المصدر</h3>
+      <div class="rc"><h3>💰 متوسط قيمة المريض (LTV) حسب المصدر</h3>
         ${srcList.filter(([,d])=>d.paying>0).sort((a,b)=>(b[1].totalRevenue/b[1].paying)-(a[1].totalRevenue/a[1].paying)).slice(0,8).map(([src,d])=>{
-          const ltv=Math.round(d.totalRevenue/d.paying);
-          const maxLTV=Math.max(...srcList.filter(([,x])=>x.paying>0).map(([,x])=>Math.round(x.totalRevenue/x.paying)));
+          const ltv=Math.round(d.totalRevenue/d.paying);const maxLTV=Math.max(...srcList.filter(([,x])=>x.paying>0).map(([,x])=>Math.round(x.totalRevenue/x.paying)));
           return`<div class="metric-row"><span style="font-size:12px;font-weight:600;min-width:90px">${esc(src)}</span><div style="flex:1;margin:0 8px;height:7px;background:var(--border);border-radius:4px;overflow:hidden"><div style="width:${Math.round(ltv/maxLTV*100)}%;height:100%;background:var(--success);border-radius:4px"></div></div><strong style="font-size:11.5px;color:var(--success)">${fmt(ltv)}</strong></div>`;}).join('')||'<div style="color:var(--muted);font-size:12px;text-align:center;padding:16px">لا توجد مدفوعات</div>'}
       </div>
-      <div class="rc">
-        <h3>🔄 معدل العودة حسب المصدر</h3>
+      <div class="rc"><h3>🔄 معدل العودة حسب المصدر</h3>
         ${srcList.filter(([,d])=>d.paying>0).sort((a,b)=>(b[1].returning/b[1].paying)-(a[1].returning/a[1].paying)).slice(0,8).map(([src,d])=>{
           const retRate=Math.round(d.returning/d.paying*100);
           return`<div class="metric-row"><span style="font-size:12px;font-weight:600;min-width:90px">${esc(src)}</span><div style="flex:1;margin:0 8px;height:7px;background:var(--border);border-radius:4px;overflow:hidden"><div style="width:${retRate}%;height:100%;background:${retRate>=40?'var(--success)':retRate>=20?'var(--warning)':'var(--danger)'};border-radius:4px"></div></div><strong style="font-size:12px;color:${retRate>=40?'var(--success)':retRate>=20?'var(--warning)':'var(--danger)'}">${retRate}%</strong></div>`;}).join('')||'<div style="color:var(--muted);font-size:12px;text-align:center;padding:16px">لا توجد بيانات</div>'}
       </div>
-      <div class="rc">
-        <h3>🏆 أفضل المصادر أداءً</h3>
+      <div class="rc"><h3>🏆 أفضل المصادر أداءً</h3>
         ${srcList.sort((a,b)=>b[1].totalRevenue-a[1].totalRevenue).slice(0,5).map(([src,d],i)=>`
-          <div class="metric-row">
-            <span style="font-size:12px;font-weight:700">${['🥇','🥈','🥉','4️⃣','5️⃣'][i]} ${esc(src)}</span>
-            <div style="text-align:left"><div style="font-size:12px;color:var(--success);font-weight:700">${fmt(d.totalRevenue)}</div><div style="font-size:10px;color:var(--muted)">${d.count} مريض</div></div>
-          </div>`).join('')}
+          <div class="metric-row"><span style="font-size:12px;font-weight:700">${['🥇','🥈','🥉','4️⃣','5️⃣'][i]} ${esc(src)}</span><div style="text-align:left"><div style="font-size:12px;color:var(--success);font-weight:700">${fmt(d.totalRevenue)}</div><div style="font-size:10px;color:var(--muted)">${d.count} مريض</div></div></div>`).join('')}
       </div>
     </div>`;
 }
