@@ -1468,11 +1468,11 @@ async function renderReports(){
   const returnRateAll=uniquePay>0?Math.round(returningPtsCount/uniquePay*100):0;
   const cac=(newPts||0)>0?Math.round(mktMo/(newPts||1)):0;
   const ltvCac=cac>0?(ltv/cac).toFixed(1):'—';
-  const srcMap={};(moPatients||[]).forEach(p=>{const src=p.source_page||p.acquisition_source||'غير محدد';if(!srcMap[src])srcMap[src]=0;srcMap[src]++;});
+  const srcMap={};(moPatients||[]).forEach(p=>{const src=p.source_page||p.acquisition_source||'';if(!src)return;if(!srcMap[src])srcMap[src]=0;srcMap[src]++;});
   const srcList=Object.entries(srcMap).sort((a,b)=>b[1]-a[1]);
   const moPaidPts=[...new Set((moPays||[]).map(p=>p.patient_id))].length;
   const{data:allPatients}=await sb.from('patients').select('acquisition_source,source_page');
-  const allSrcMap={};(allPatients||[]).forEach(p=>{const src=p.source_page||p.acquisition_source||'غير محدد';if(!allSrcMap[src])allSrcMap[src]=0;allSrcMap[src]++;});
+  const allSrcMap={};(allPatients||[]).forEach(p=>{const src=p.source_page||p.acquisition_source||'';if(!src)return;if(!allSrcMap[src])allSrcMap[src]=0;allSrcMap[src]++;});
   const allSrcList=Object.entries(allSrcMap).sort((a,b)=>b[1]-a[1]);
   const allTotal=(allPatients||[]).length;
   document.getElementById('pg-content').innerHTML=`
@@ -1554,24 +1554,30 @@ async function renderBD(){
     payMap[pid].independentVisits=calcIndependentVisits(payMap[pid].dates);
   });
   const srcMap={};
+  let undefinedCount=0,undefinedPaying=0;
   (patients||[]).forEach(p=>{
-    const src=p.source_page||p.acquisition_source||'غير محدد';
+    const src=p.source_page||p.acquisition_source||'';
+    // تجاهل المرضى بدون مصدر محدد
+    if(!src){undefinedCount++;const pm=payMap[p.id];if(pm&&pm.total>0)undefinedPaying++;return;}
     if(!srcMap[src])srcMap[src]={count:0,paying:0,totalRevenue:0,returning:0};
     srcMap[src].count++;
     const pm=payMap[p.id];
-    // عائد = مريض عنده زيارتين مستقلتين أو أكثر (بفاصل أكثر من شهرين)
     if(pm&&pm.total>0){srcMap[src].paying++;srcMap[src].totalRevenue+=pm.total;if(pm.independentVisits>1)srcMap[src].returning++;}
   });
   const srcList=Object.entries(srcMap).sort((a,b)=>b[1].count-a[1].count);
   const totalPts=(patients||[]).length;
   const totalRev=Object.values(srcMap).reduce((s,d)=>s+d.totalRevenue,0);
   document.getElementById('pg-content').innerHTML=`
-    <div class="cards" style="margin-bottom:20px">
-      <div class="card" style="border-right-color:var(--teal)"><div class="lbl">إجمالي المرضى</div><div class="val">${totalPts}</div></div>
+    <div class="cards" style="margin-bottom:${undefinedCount>0?'8px':'20px'}">
+      <div class="card" style="border-right-color:var(--teal)"><div class="lbl">إجمالي المرضى (بمصدر)</div><div class="val">${totalPts-undefinedCount}</div></div>
       <div class="card" style="border-right-color:var(--success)"><div class="lbl">إجمالي الإيرادات</div><div class="val" style="font-size:14px;color:var(--success)">${fmt(totalRev)}</div></div>
       <div class="card"><div class="lbl">عدد المصادر</div><div class="val">${srcList.length}</div></div>
-      <div class="card" style="border-right-color:var(--warning)"><div class="lbl">متوسط LTV</div><div class="val" style="font-size:14px">${totalPts?fmt(Math.round(totalRev/totalPts)):'—'}</div></div>
+      <div class="card" style="border-right-color:var(--warning)"><div class="lbl">متوسط LTV</div><div class="val" style="font-size:14px">${totalPts-undefinedCount?fmt(Math.round(totalRev/(totalPts-undefinedCount))):'—'}</div></div>
     </div>
+    ${undefinedCount>0?`<div class="alert a-info" style="margin-bottom:14px">
+      <span>ℹ️</span><span><strong>${undefinedCount.toLocaleString('ar-IQ')} مريض</strong> بدون مصدر محدد — مستثنون من التقرير. منهم <strong>${undefinedPaying}</strong> دفعوا.</span>
+    </div>`:''}
+
     <div class="tbl-wrap" style="margin-bottom:16px">
       <div class="tbl-hdr"><h3>📣 تحليل المصادر التفصيلي</h3></div>
       <div style="overflow-x:auto"><table style="min-width:600px">
