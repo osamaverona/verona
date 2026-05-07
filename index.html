@@ -1179,11 +1179,21 @@ async function saveCollectRemaining(payId,patientId,oldRemaining){
   if(!collected||collected<=0){alert('أدخل المبلغ');return;}
   const{data:pay}=await sb.from('payments').select('paid_amount,remaining').eq('id',payId).single();
   if(!pay)return;
-  const newPaid=(pay.paid_amount||0)+collected;
   const newRemaining=Math.max(0,(pay.remaining||0)-collected);
-  await sb.from('payments').update({paid_amount:newPaid,remaining:newRemaining}).eq('id',payId);
+  await sb.from('payments').update({paid_amount:(pay.paid_amount||0)+collected,remaining:newRemaining}).eq('id',payId);
+  const origMonth=(pay.date||'').slice(0,7);
+  const collectMonth=collectDate.slice(0,7);
+  if(origMonth && origMonth!==collectMonth){
+    await sb.from('payments').insert({
+      patient_id:pay.patient_id,patient_name:pay.patient_name,
+      service:(pay.service||'خدمة')+' — تحصيل متبقي',
+      total_amount:collected,paid_amount:collected,remaining:0,
+      date:collectDate,doctor_name:pay.doctor_name,
+      recorded_by:USER?.email,
+      notes:'تحصيل متبقي من دفعة بتاريخ '+pay.date
+    });
+  }
   closeModal();openPatient(patientId);
-}
 async function modalEditPayment(payId,patientId){
   const{data:pay}=await sb.from('payments').select('*').eq('id',payId).single();if(!pay)return;
   const svcOpts=SERVICES.map(s=>`<option value="${s}" ${pay.service===s?'selected':''}>${s}</option>`).join('');
