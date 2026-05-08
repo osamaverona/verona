@@ -202,7 +202,6 @@ let sb=null,USER=null,ROLE='reception',RT=null,CUR='dashboard';
 let PT_PAGE=1,PT_SEARCH='',PT_FILTER='all',RPT_MONTH=todayStr().slice(0,7);
 const PT_PER=50;
 
-// ── قائمة الخدمات الموحدة ─────────────────────────────────────────────────
 const SERVICES=['S+P','Smile','تقويم شفاف','TMG','زراعة','حشوة','حشوة جذر','تغليف','تحنيط','حافظ مسافة','قص لثة','تقويم معدني','قلع','قلع جراحي','فلورايد','حقن','عملية جراحية','زراعة عظم','رفع جيب انفي','متابعة','تثبيت الابتسامة','غاز ضاحك','مقدمة عمل','ليزر','Gpt'];
 
 const getConf=()=>{try{return JSON.parse(localStorage.getItem(CFG));}catch{return null;}};
@@ -678,7 +677,7 @@ async function openPatient(id){
 window.filterPhotos=function(pid,cat){openPatient(pid);}
 function ir(k,vv){return `<div class="info-row"><span class="k">${k}</span><span class="v">${vv}</span></div>`}
 
-// ── Treatment Plans ── تعديل: dropdown خدمات + متعدد أسنان + حفظ مضمون ──
+// ── Treatment Plans ───────────────────────────────────
 function modalAddPlan(pid,pname){
   modal(`خطة علاج — ${pname}`,`
     <div class="form-group"><label>عنوان الخطة</label><input id="pl-title" placeholder="مثال: خطة زراعة شاملة"></div>
@@ -1055,7 +1054,7 @@ async function saveAppt(fixId=''){
 }
 async function updAppt(id,status){await sb.from('appointments').update({status}).eq('id',id);}
 
-// ── Payments ── تعديل: dropdown خدمة + نص حر للسن ───────────────────────
+// ── Payments ──────────────────────────────────────────
 async function renderPayments(){
   let q=sb.from('payments').select('*').order('date',{ascending:false}).order('created_at',{ascending:false});
   if(ROLE==='doctor'){const drName=USER?.user_metadata?.name||'';q=q.eq('doctor_name',drName);}
@@ -1107,7 +1106,7 @@ function modalAddPayment(fixId='',fixName='',pts=[]){
       <div class="form-group"><label>المدفوع الآن (د.ع)</label><input id="pay-paid" type="number" placeholder="0" oninput="calcRem()"></div>
     </div>
     <div id="pay-rem-info" class="alert a-info">المتبقي: 0 د.ع</div>
-    <div class="form-group"><label>التاريخ <span style="color:var(--muted);font-size:10.5px">(قابل للتعديل)</span></label><input id="pay-date" type="date" value="${todayStr()}"></div>
+    <div class="form-group"><label>📅 تاريخ الدفع الفعلي *</label><input id="pay-date" type="date" value="${todayStr()}"></div>
     <div class="form-group"><label>ملاحظات</label><textarea id="pay-n" rows="2"></textarea></div>
     <div class="form-group">
       <label>⭐ نسبة رضى المريض (1-10)</label>
@@ -1139,12 +1138,10 @@ async function savePay(fixId,fixName){
   let pid=fixId,pname=fixName;
   if(!pid){const pv=v('pay-p');if(!pv){alert('اختر مريضاً');return;}[pid,pname]=pv.split('|');}
   const total=Number(v('pay-total')||0),paid=Number(v('pay-paid')||0),remaining=Math.max(0,total-paid);
-  // الخدمة من dropdown
   const service=(document.getElementById('pay-s')?.value||'').trim();
   if(!service){alert('اختر الخدمة');return;}
   const drName=USER?.user_metadata?.name||document.getElementById('pay-dr')?.value?.trim()||'غير محدد';
   const sat=v('pay-sat');
-  // السن: نص حر يقبل أرقام وحروف وعبارات
   const toothVal=document.getElementById('pay-tooth')?.value?.trim()||null;
   await sb.from('payments').insert({
     patient_id:pid,patient_name:pname,service,
@@ -1162,28 +1159,57 @@ async function saveSatisfaction(pid,score){
   await sb.from('patients').update({satisfaction_score:score}).eq('id',pid);
   openPatient(pid);
 }
+
+// ── Collect Remaining ─── التعديل الرئيسي ────────────
 function modalCollectRemaining(payId,patientId,remaining,service){
   modal(`تحصيل المتبقي — ${service}`,`
     <div class="alert a-warn">المبلغ المتبقي: <strong>${fmt(Number(remaining))}</strong></div>
     <div class="form-group"><label>المبلغ المحصّل (د.ع)</label>
       <input id="cr-amount" type="number" value="${remaining}" max="${remaining}" style="font-size:16px;font-weight:700;color:var(--teal)">
     </div>
-    <div class="form-group"><label>التاريخ</label><input id="cr-date" type="date" value="${todayStr()}"></div>
+    <div class="form-group">
+      <label>📅 تاريخ التحصيل الفعلي *</label>
+      <input id="cr-date" type="date" value="${todayStr()}">
+      <div style="margin-top:5px;font-size:11px;color:var(--muted)">⚠ هذا التاريخ سيحدد الشهر الذي تُحتسب فيه الدفعة في الإحصائيات</div>
+    </div>
     <div class="form-actions">
       <button class="btn btn-outline" onclick="closeModal()">إلغاء</button>
       <button class="btn btn-success" onclick="saveCollectRemaining('${payId}','${patientId}','${remaining}')">✓ تأكيد التحصيل</button>
     </div>`);
 }
+
 async function saveCollectRemaining(payId,patientId,oldRemaining){
   const collected=Number(v('cr-amount')||0);
   if(!collected||collected<=0){alert('أدخل المبلغ');return;}
-  const{data:pay}=await sb.from('payments').select('paid_amount,remaining').eq('id',payId).single();
+  const collectDate=v('cr-date');
+
+  const{data:pay}=await sb.from('payments').select('*').eq('id',payId).single();
   if(!pay)return;
-  const newPaid=(pay.paid_amount||0)+collected;
+
   const newRemaining=Math.max(0,(pay.remaining||0)-collected);
-  await sb.from('payments').update({paid_amount:newPaid,remaining:newRemaining}).eq('id',payId);
+
+  // تحديث المتبقي في الدفعة الأصلية فقط — لا تلمس paid_amount ولا date
+  await sb.from('payments').update({remaining:newRemaining}).eq('id',payId);
+
+  // سجل دفعة جديد بتاريخ التحصيل الفعلي
+  // هذا هو الذي يظهر في إحصائيات الشهر الصحيح
+  await sb.from('payments').insert({
+    patient_id:patientId,
+    patient_name:pay.patient_name,
+    service:pay.service+' — تحصيل متبقي',
+    total_amount:collected,
+    paid_amount:collected,
+    remaining:0,
+    date:collectDate,
+    doctor_name:pay.doctor_name,
+    tooth_number:pay.tooth_number||null,
+    notes:'تحصيل متبقي من دفعة '+pay.date,
+    recorded_by:USER?.email,
+  });
+
   closeModal();openPatient(patientId);
 }
+
 async function modalEditPayment(payId,patientId){
   const{data:pay}=await sb.from('payments').select('*').eq('id',payId).single();if(!pay)return;
   const svcOpts=SERVICES.map(s=>`<option value="${s}" ${pay.service===s?'selected':''}>${s}</option>`).join('');
@@ -1324,7 +1350,6 @@ async function saveExp(){
   await sb.from('expenses').insert({category:v('ex-c'),description:desc,amount,date:v('ex-d'),is_marketing:document.getElementById('ex-mkt').checked});
   closeModal();renderExpenses();
 }
-
 function modalEditExp(id,cat,desc,amount,date,isMkt){
   modal('تعديل المصروف',`
     <div class="form-row">
@@ -1374,7 +1399,6 @@ async function renderDoctors(){
     if(!map[dr].services[svc])map[dr].services[svc]={count:0,income:0};
     map[dr].services[svc].count++;map[dr].services[svc].income+=p.paid_amount||0;
   });
-  // بناء returnMap مع التواريخ لكل مريض لكل طبيب
   const returnMap={};
   (allPays||[]).forEach(p=>{
     const dr=p.doctor_name||'غير محدد';
@@ -1383,7 +1407,6 @@ async function renderDoctors(){
     existing.push(p.date);
     returnMap[dr].set(p.patient_id,existing);
   });
-  // معدل العودة = مرضى عندهم زيارتين مستقلتين أو أكثر (بفاصل شهرين)
   const getReturnRate=(dr)=>{
     const m=returnMap[dr];if(!m||m.size===0)return 0;
     let returning=0;
@@ -1453,12 +1476,10 @@ async function renderReports(){
     sb.from('patients').select('*',{count:'exact',head:true}).gte('created_at',mo).lte('created_at',moEnd),
     sb.from('patients').select('name,acquisition_source,source_page').gte('created_at',mo).lte('created_at',moEnd),
   ]);
-  // جلب تفاصيل المرضى الجدد مع أول طبيب زاروه
   const{data:moNewPtsDetail}=await sb.from('patients')
     .select('id,name,acquisition_source,source_page,created_at,phone')
     .gte('created_at',mo).lte('created_at',moEnd)
     .order('created_at',{ascending:false});
-  // جلب أول دفعة لكل مريض جديد لمعرفة الطبيب
   const newPtIds=(moNewPtsDetail||[]).map(p=>p.id);
   let firstPayMap={};
   if(newPtIds.length>0){
@@ -1476,7 +1497,6 @@ async function renderReports(){
   const moProfit=moIncome-moExpTotal;
   const uniquePay=[...new Set((allPays||[]).map(p=>p.patient_id))].length;
   const ltv=uniquePay>0?Math.round(income/uniquePay):0;
-  // معدل العودة الحقيقي: مرضى عادوا بعد فاصل أكثر من شهرين
   const payDatesMap={};
   (allPays||[]).forEach(p=>{if(!payDatesMap[p.patient_id])payDatesMap[p.patient_id]=[];if(p.date)payDatesMap[p.patient_id].push(p.date);});
   const returningPtsCount=Object.values(payDatesMap).filter(dates=>calcIndependentVisits(dates)>1).length;
@@ -1565,9 +1585,7 @@ async function renderReports(){
     </div>`;
 }
 
-// ── حساب الزيارات المستقلة (فاصل شهرين) ─────────────────
-// الزيارات خلال شهرين من أول زيارة = زيارة واحدة
-// إذا رجع بعد شهرين = زيارة مستقلة جديدة
+// ── calcIndependentVisits ─────────────────────────────
 function calcIndependentVisits(dates){
   if(!dates||dates.length===0)return 0;
   const sorted=dates.map(d=>new Date(d)).sort((a,b)=>a-b);
@@ -1586,14 +1604,12 @@ async function renderBD(){
     sb.from('patients').select('id,acquisition_source,source_page,created_at'),
     sb.from('payments').select('patient_id,paid_amount,date').order('date',{ascending:true}),
   ]);
-  // بناء payMap مع التواريخ لحساب الزيارات المستقلة
   const payMap={};
   (payments||[]).forEach(p=>{
     if(!payMap[p.patient_id])payMap[p.patient_id]={total:0,dates:[]};
     payMap[p.patient_id].total+=p.paid_amount||0;
     if(p.date)payMap[p.patient_id].dates.push(p.date);
   });
-  // احسب الزيارات المستقلة لكل مريض
   Object.keys(payMap).forEach(pid=>{
     payMap[pid].independentVisits=calcIndependentVisits(payMap[pid].dates);
   });
@@ -1601,7 +1617,6 @@ async function renderBD(){
   let undefinedCount=0,undefinedPaying=0;
   (patients||[]).forEach(p=>{
     const src=p.acquisition_source||p.source_page||'';
-    // تجاهل المرضى بدون مصدر محدد
     if(!src){undefinedCount++;const pm=payMap[p.id];if(pm&&pm.total>0)undefinedPaying++;return;}
     if(!srcMap[src])srcMap[src]={count:0,paying:0,totalRevenue:0,returning:0};
     srcMap[src].count++;
@@ -1621,7 +1636,6 @@ async function renderBD(){
     ${undefinedCount>0?`<div class="alert a-info" style="margin-bottom:14px">
       <span>ℹ️</span><span><strong>${undefinedCount.toLocaleString('ar-IQ')} مريض</strong> بدون مصدر محدد — مستثنون من التقرير. منهم <strong>${undefinedPaying}</strong> دفعوا.</span>
     </div>`:''}
-
     <div class="tbl-wrap" style="margin-bottom:16px">
       <div class="tbl-hdr"><h3>📣 تحليل المصادر التفصيلي</h3></div>
       <div style="overflow-x:auto"><table style="min-width:600px">
