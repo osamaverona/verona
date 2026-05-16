@@ -1216,6 +1216,22 @@ function setSatisfaction(n){
     else{btn.style.background='#f8fafc';btn.style.color='var(--text)';btn.style.borderColor='var(--border)';}
   });
 }
+async function autoUpdatePlanFromPayment(patientId,service,remaining){
+  const{data:plans}=await sb.from('treatment_plans').select('id,items').eq('patient_id',patientId);
+  if(!plans||!plans.length)return;
+  for(const plan of plans){
+    const items=[...(plan.items||[])];
+    let changed=false;
+    for(let i=0;i<items.length;i++){
+      if(items[i].service===service&&items[i].status!=='done'){
+        items[i].status=remaining===0?'done':'inprogress';
+        changed=true;break;
+      }
+    }
+    if(changed)await sb.from('treatment_plans').update({items}).eq('id',plan.id);
+  }
+}
+
 async function savePay(fixId,fixName){
   let pid=fixId,pname=fixName;
   if(!pid){const pv=v('pay-p');if(!pv){alert('اختر مريضاً');return;}[pid,pname]=pv.split('|');}
@@ -1235,6 +1251,7 @@ async function savePay(fixId,fixName){
     recorded_by:USER?.email,
     satisfaction_score:sat?Number(sat):null
   });
+  await autoUpdatePlanFromPayment(pid,service,remaining);
   closeModal();renderPage(CUR);
 }
 async function saveSatisfaction(pid,score){
@@ -1273,6 +1290,7 @@ async function saveCollectRemaining(payId,patientId,oldRemaining){
     date:collectDate,doctor_name:pay.doctor_name,tooth_number:pay.tooth_number||null,
     notes:'تحصيل متبقي من دفعة '+pay.date,recorded_by:USER?.email,
   });
+  if(newRemaining===0)await autoUpdatePlanFromPayment(patientId,pay.service,0);
   closeModal();openPatient(patientId);
 }
 async function modalEditPayment(payId,patientId){
