@@ -946,6 +946,7 @@ function modalAddPatient(){
       <div class="form-group"><label>مصدر المعرفة *</label><select id="ps"><option value="">اختر</option>${SOURCES.map(s=>`<option>${s}</option>`).join('')}</select></div>
       <div class="form-group"><label>الصفحة / المُحيل</label><input id="psrc" placeholder="صفحة د. أسامة..."></div>
     </div>
+    <div class="form-group"><label>🩺 الطبيب الفاحص</label><select id="p-examdr"><option value="">اختر الطبيب</option>${DOCTORS_LIST.map(d=>`<option value="${d}">${d}</option>`).join('')}</select></div>
     <div class="form-row">
       <div class="form-group"><label>تاريخ المتابعة</label><input id="pfup" type="date"></div>
       <div class="form-group"><label>ملاحظة المتابعة</label><input id="pfupn"></div>
@@ -980,6 +981,7 @@ async function savePatient(){
     followup_date:v('pfup')||null,followup_note:v('pfupn').trim(),
     refused_treatment:document.getElementById('prefused')?.checked||false,
     notes:v('pno').trim(),patient_number:pNum,
+    examining_doctor:v('p-examdr')||null,
     is_smoker:document.getElementById('p-smoker')?.checked||false,
     has_allergy:document.getElementById('p-allergy')?.checked||false,
     allergy_details:v('p-ad').trim(),
@@ -1002,6 +1004,7 @@ async function modalEditPatient(pid){
       <div class="form-group"><label>مصدر المعرفة</label><select id="ep-src"><option value="">اختر</option>${SOURCES.map(s=>`<option ${p.acquisition_source===s?'selected':''}>${s}</option>`).join('')}</select></div>
       <div class="form-group"><label>الصفحة / المُحيل</label><input id="ep-sp" value="${esc(p.source_page||'')}"></div>
     </div>
+    <div class="form-group"><label>🩺 الطبيب الفاحص</label><select id="ep-examdr"><option value="">اختر</option>${DOCTORS_LIST.map(d=>`<option value="${d}" ${p.examining_doctor===d?'selected':''}>${d}</option>`).join('')}</select></div>
     <div class="form-group"><label>ملاحظات</label><textarea id="ep-no" rows="2">${esc(p.notes||'')}</textarea></div>
     <div class="form-actions">
       <button class="btn btn-outline" onclick="closeModal()">إلغاء</button>
@@ -1010,7 +1013,7 @@ async function modalEditPatient(pid){
 }
 async function saveEditPatient(pid){
   const name=v('ep-n').trim();if(!name){alert('أدخل الاسم');return;}
-  await sb.from('patients').update({name,phone:v('ep-p').trim(),dob:v('ep-d')||null,address:v('ep-a').trim(),acquisition_source:v('ep-src'),source_page:v('ep-sp').trim(),notes:v('ep-no').trim()}).eq('id',pid);
+  await sb.from('patients').update({name,phone:v('ep-p').trim(),dob:v('ep-d')||null,address:v('ep-a').trim(),acquisition_source:v('ep-src'),source_page:v('ep-sp').trim(),notes:v('ep-no').trim(),examining_doctor:v('ep-examdr')||null}).eq('id',pid);
   closeModal();openPatient(pid);
 }
 function modalEditFollowup(pid,date,note,refused){
@@ -1557,7 +1560,7 @@ async function renderReports(){
     sb.from('patients').select('name,acquisition_source,source_page').gte('created_at',mo).lte('created_at',moEnd),
     sb.from('radiology_orders').select('*').gte('date',mo).lte('date',moEnd),
   ]);
-  const{data:moNewPtsDetail}=await sb.from('patients').select('id,name,acquisition_source,source_page,created_at,phone').gte('created_at',mo).lte('created_at',moEnd).order('created_at',{ascending:false});
+  const{data:moNewPtsDetail}=await sb.from('patients').select('id,name,acquisition_source,source_page,created_at,phone,examining_doctor').gte('created_at',mo).lte('created_at',moEnd).order('created_at',{ascending:false});
   const newPtIds=(moNewPtsDetail||[]).map(p=>p.id);
   let firstPayMap={};
   if(newPtIds.length>0){
@@ -1604,14 +1607,16 @@ async function renderReports(){
     </div>
     <div class="tbl-wrap" style="margin-bottom:16px">
       <div class="tbl-hdr"><h3>👥 المرضى الجدد — ${RPT_MONTH} (${(moNewPtsDetail||[]).length})</h3></div>
-      ${(moNewPtsDetail||[]).length>0?`<div style="overflow-x:auto"><table style="min-width:500px">
-        <thead><tr><th>الاسم</th><th>تاريخ التسجيل</th><th>مصدر المعرفة</th><th>المحيل / الصفحة</th><th>الطبيب</th></tr></thead>
+      ${(moNewPtsDetail||[]).length>0?`<div style="overflow-x:auto"><table style="min-width:550px">
+        <thead><tr><th>الاسم</th><th>تاريخ التسجيل</th><th>مصدر المعرفة</th><th>الطبيب الفاحص</th><th>الحالة</th></tr></thead>
         <tbody>${(moNewPtsDetail||[]).map(p=>{
-          const src=p.acquisition_source||'—';const ref=p.source_page||'—';const dr=firstPayMap[p.id]||'لم يزر بعد';
+          const src=p.acquisition_source||'—';
+          const examDr=p.examining_doctor||'—';
+          const worked=!!firstPayMap[p.id];
           return`<tr><td style="font-weight:700">${esc(p.name)}</td><td style="font-size:11px;color:var(--muted)">${p.created_at?.slice(0,10)||'—'}</td>
           <td>${src!=='—'?`<span class="badge bgr">${esc(src)}</span>`:'<span style="color:var(--muted);font-size:11px">—</span>'}</td>
-          <td style="font-size:11.5px;color:var(--muted)">${ref!=='—'?esc(ref):'—'}</td>
-          <td>${dr!=='لم يزر بعد'?`<span class="badge bt">${esc(dr)}</span>`:`<span style="color:var(--muted);font-size:11px">${dr}</span>`}</td></tr>`;
+          <td>${examDr!=='—'?`<span class="badge bt">${esc(examDr)}</span>`:'<span style="color:var(--muted);font-size:11px">—</span>'}</td>
+          <td>${worked?'<span class="badge bg">✓ اشتغل</span>':'<span class="badge br">✗ لم يشتغل</span>'}</td></tr>`;
         }).join('')}</tbody></table></div>`:`<div style="text-align:center;color:var(--muted);padding:26px;font-size:12px">لا مرضى جدد هذا الشهر</div>`}
     </div>
     <div class="report-grid">
@@ -1640,26 +1645,31 @@ async function renderReports(){
       <div class="tbl-hdr"><h3>👨‍⚕️ المرضى الجدد per طبيب — ${RPT_MONTH}</h3></div>
       ${(()=>{
         const drMap={};
+        const drStats={};
         (moNewPtsDetail||[]).forEach(p=>{
-          const dr=firstPayMap[p.id]||'لم يزر بعد';
-          if(!drMap[dr])drMap[dr]=0;
-          drMap[dr]++;
+          const dr=p.examining_doctor||'غير محدد';
+          if(!drStats[dr])drStats[dr]={total:0,worked:0};
+          drStats[dr].total++;
+          if(firstPayMap[p.id])drStats[dr].worked++;
         });
         const total=(moNewPtsDetail||[]).length||1;
-        const sorted=Object.entries(drMap).sort((a,b)=>b[1]-a[1]);
+        const sorted=Object.entries(drStats).sort((a,b)=>b[1].total-a[1].total);
         if(!sorted.length)return'<div style="text-align:center;color:var(--muted);padding:26px;font-size:12px">لا مرضى جدد</div>';
-        const rows=sorted.map(([dr,cnt],i)=>{
-          const pct=Math.round(cnt/total*100);
-          const isNone=dr==='لم يزر بعد';
-          const medal=i===0&&!isNone?'🥇':i===1&&!isNone?'🥈':i===2&&!isNone?'🥉':'';
-          return '<tr><td style="font-size:18px;text-align:center">'+(medal||(i+1))+'</td>'
-            +'<td style="font-weight:700'+(isNone?';color:var(--muted)':'')+'">'+esc(dr)+'</td>'
-            +'<td><strong style="font-size:16px;color:'+(isNone?'var(--muted)':'var(--teal)')+'">'+cnt+'</strong></td>'
-            +'<td><span class="badge '+(isNone?'bgr':pct>=30?'bg':pct>=15?'bt':'bb')+'">'+pct+'%</span></td>'
-            +'<td style="min-width:140px"><div style="height:8px;background:var(--border);border-radius:4px;overflow:hidden">'
-            +'<div style="width:'+pct+'%;height:100%;background:'+(isNone?'var(--muted)':'var(--teal)')+';border-radius:4px"></div></div></td></tr>';
+        const rows=sorted.map(([dr,d],i)=>{
+          const pct=Math.round(d.total/total*100);
+          const conv=d.total>0?Math.round(d.worked/d.total*100):0;
+          const medal=i===0?'🥇':i===1?'🥈':i===2?'🥉':'';
+          return '<tr>'
+            +'<td style="font-size:18px;text-align:center">'+(medal||(i+1))+'</td>'
+            +'<td style="font-weight:700">'+esc(dr)+'</td>'
+            +'<td style="text-align:center"><strong style="font-size:15px;color:var(--teal)">'+d.total+'</strong></td>'
+            +'<td style="text-align:center"><strong style="color:var(--success)">'+d.worked+'</strong></td>'
+            +'<td style="text-align:center"><strong style="color:var(--danger)">'+(d.total-d.worked)+'</strong></td>'
+            +'<td><span class="badge '+(conv>=70?'bg':conv>=40?'bt':'br')+'">'+conv+'%</span></td>'
+            +'<td style="min-width:120px"><div style="height:8px;background:var(--border);border-radius:4px;overflow:hidden">'
+            +'<div style="width:'+pct+'%;height:100%;background:var(--teal);border-radius:4px"></div></div></td></tr>';
         }).join('');
-        return '<table><thead><tr><th>الترتيب</th><th>الطبيب</th><th>المرضى الجدد</th><th>النسبة</th><th>التمثيل البياني</th></tr></thead><tbody>'+rows+'</tbody></table>';
+        return '<table><thead><tr><th>الترتيب</th><th>الطبيب الفاحص</th><th>الكل</th><th style="color:var(--success)">اشتغل</th><th style="color:var(--danger)">لم يشتغل</th><th>نسبة التحويل</th><th>التمثيل</th></tr></thead><tbody>'+rows+'</tbody></table>';
       })()}
     </div>
     <div class="tbl-wrap" style="margin-top:16px">
