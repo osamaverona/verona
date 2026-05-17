@@ -403,6 +403,34 @@ async function renderDash(){
     return `<div class="card"><div class="lbl">${emoji} ${lbl}</div><div class="val" ${st} style="${sz}">${val}</div><div class="sub">${sub}</div></div>`;
   };
   const incompletePlansSec=ROLE==='admin'?(await renderIncompletePlansHtml()):'';
+  // Dormant patients: last payment > 6 months ago, no future appointment
+  let dormantHtml='';
+  if(ROLE==='admin'){
+    const sixMonthsAgo=new Date();sixMonthsAgo.setMonth(sixMonthsAgo.getMonth()-6);
+    const sixStr=sixMonthsAgo.toISOString().slice(0,10);
+    const{data:dormPays}=await sb.from('payments').select('patient_id,patient_name,date').lte('date',sixStr).order('date',{ascending:false});
+    const{data:recentPays}=await sb.from('payments').select('patient_id').gt('date',sixStr);
+    const{data:futureAppts}=await sb.from('appointments').select('patient_id').gte('date',todayStr());
+    const recentIds=new Set((recentPays||[]).map(p=>p.patient_id));
+    const futureIds=new Set((futureAppts||[]).map(a=>a.patient_id));
+    const seen=new Set();
+    const dormant=(dormPays||[]).filter(p=>{
+      if(seen.has(p.patient_id)||recentIds.has(p.patient_id)||futureIds.has(p.patient_id))return false;
+      seen.add(p.patient_id);return true;
+    }).slice(0,10);
+    if(dormant.length>0){
+      dormantHtml=`<div class="tbl-wrap" style="margin-top:14px;border-right:3px solid var(--warning)">
+        <div class="tbl-hdr"><h3>😴 مرضى خاملون — لم يزوروا منذ ٦+ أشهر (${seen.size})</h3></div>
+        <table><thead><tr><th>المريض</th><th>آخر زيارة</th><th>تواصل</th></tr></thead>
+        <tbody>${dormant.map(p=>`<tr onclick="openPatient('${p.patient_id}')">
+          <td style="font-weight:700">${esc(p.patient_name||'—')}</td>
+          <td style="color:var(--danger);font-weight:700">${p.date||'—'}</td>
+          <td><button class="btn btn-outline btn-sm" onclick="event.stopPropagation();openPatient('${p.patient_id}')">فتح الملف</button></td>
+        </tr>`).join('')}</tbody></table>
+        ${seen.size>10?`<div style="text-align:center;padding:8px;font-size:11px;color:var(--muted)">يعرض ١٠ من أصل ${seen.size} مريض خامل</div>`:''}
+      </div>`;
+    }
+  }
   document.getElementById('pg-content').innerHTML=`
     <div class="cards">
       ${sc('👥','المرضى',pCount||0,'إجمالي المسجلين')}
@@ -433,6 +461,7 @@ async function renderDash(){
       </div>
     </div>
     ${incompletePlansSec}
+    ${dormantHtml}
     ${(yesterdayAppts||[]).length>0?`
     <div class="tbl-wrap" style="margin-top:14px">
       <div class="tbl-hdr" style="background:#f8fafc">
@@ -691,9 +720,10 @@ async function openPatient(id){
       <div>
         <div class="tbl-wrap">
           <div class="tbl-hdr"><h3>سجل المدفوعات</h3></div>
-          <table><thead><tr><th>التاريخ</th><th>الخدمة</th><th>السن</th><th>الكلي</th><th>المدفوع</th><th>المتبقي</th><th>رضى</th>${ROLE==='admin'?'<th></th>':ROLE==='reception'?'<th>تحصيل</th>':''}</tr></thead>
+          <table><thead><tr><th>التاريخ</th><th>الخدمة</th><th>نوع</th><th>السن</th><th>الكلي</th><th>المدفوع</th><th>المتبقي</th><th>رضى</th>${ROLE==='admin'?'<th></th>':ROLE==='reception'?'<th>تحصيل</th>':''}</tr></thead>
           <tbody>${(pays||[]).map(x=>`<tr>
             <td>${x.date}</td><td>${esc(x.service||'—')}</td>
+            <td><span class="badge ${x.visit_type==='كشف'?'bb':x.visit_type==='متابعة'?'bt':'bgr'}">${x.visit_type||'علاج'}</span></td>
             <td>${x.tooth_number?`<span class="badge bb">${esc(String(x.tooth_number))}</span>`:'—'}</td>
             <td>${fmt(x.total_amount)}</td>
             <td style="color:var(--success);font-weight:700">${fmt(x.paid_amount)}</td>
@@ -962,9 +992,22 @@ function modalAddPatient(){
       </div>
       <div id="p-ar" style="display:none"><div class="form-group" style="margin-bottom:0"><label>تفاصيل الحساسية</label><input id="p-ad" placeholder="البنسلين، أسبرين..."></div></div>
     </div>
-    <label style="display:flex;align-items:center;gap:7px;font-size:12px;font-weight:600;cursor:pointer;margin-bottom:12px;padding:9px;background:#fef2f2;border-radius:8px">
-      <input type="checkbox" id="prefused" style="width:auto;accent-color:var(--danger)"> ⚠ رفض العلاج
-    </label>
+    <div style="background:#fef2f2;border-radius:8px;padding:9px;margin-bottom:12px">
+      <label style="display:flex;align-items:center;gap:7px;font-size:12px;font-weight:600;cursor:pointer">
+        <input type="checkbox" id="prefused" style="width:auto;accent-color:var(--danger)" onchange="document.getElementById('p-refblock').style.display=this.checked?'block':'none'"> ⚠ رفض العلاج
+      </label>
+      <div id="p-refblock" style="display:none;margin-top:8px">
+        <select id="p-refreason" style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;font-family:Cairo,sans-serif">
+          <option value="">اختر السبب</option>
+          <option>السعر مرتفع</option>
+          <option>الخوف من العلاج</option>
+          <option>جاء للاستشارة فقط</option>
+          <option>يريد التفكير</option>
+          <option>راجع مكان آخر</option>
+          <option>أخرى</option>
+        </select>
+      </div>
+    </div>
     <div class="form-group"><label>ملاحظات</label><textarea id="pno" rows="2"></textarea></div>
     <div class="form-actions">
       <button class="btn btn-outline" onclick="closeModal()">إلغاء</button>
@@ -973,6 +1016,8 @@ function modalAddPatient(){
 }
 async function savePatient(){
   const name=v('pn').trim();if(!name){alert('أدخل الاسم');return;}
+  if(!v('ps')){alert('مصدر المعرفة إلزامي — كيف عرف المريض عيادة فيرونا؟');return;}
+  if(!v('p-examdr')){alert('الطبيب الفاحص إلزامي — على أي طبيب دخل المريض؟');return;}
   const{count}=await sb.from('patients').select('*',{count:'exact',head:true});
   const pNum='V-'+String((count||0)+1).padStart(4,'0');
   await sb.from('patients').insert({
@@ -980,6 +1025,7 @@ async function savePatient(){
     address:v('pa').trim(),acquisition_source:v('ps'),source_page:v('psrc').trim(),
     followup_date:v('pfup')||null,followup_note:v('pfupn').trim(),
     refused_treatment:document.getElementById('prefused')?.checked||false,
+    refusal_reason:document.getElementById('prefused')?.checked?(v('p-refreason')||null):null,
     notes:v('pno').trim(),patient_number:pNum,
     examining_doctor:v('p-examdr')||null,
     is_smoker:document.getElementById('p-smoker')?.checked||false,
@@ -1176,10 +1222,19 @@ function modalAddPayment(fixId='',fixName='',pts=[]){
       ${fixId?`<input value="${esc(fixName)}" readonly style="background:#f8fafc;color:var(--muted)">`:
         `<select id="pay-p"><option value="">اختر</option>${pts.map(p=>`<option value="${p.id}|${p.name}">${p.name}</option>`).join('')}</select>`}
     </div>
-    <div class="form-group"><label>الخدمة *</label>
-      <select id="pay-s" style="width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12.5px;font-family:'Cairo',sans-serif;color:var(--text);outline:none;background:#fff">
-        <option value="">اختر الخدمة</option>${svcOpts}
-      </select>
+    <div class="form-row">
+      <div class="form-group"><label>الخدمة *</label>
+        <select id="pay-s" style="width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12.5px;font-family:'Cairo',sans-serif;color:var(--text);outline:none;background:#fff">
+          <option value="">اختر الخدمة</option>${svcOpts}
+        </select>
+      </div>
+      <div class="form-group"><label>نوع الزيارة</label>
+        <select id="pay-vtype" style="width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12.5px;font-family:'Cairo',sans-serif;outline:none;background:#fff">
+          <option value="علاج">🦷 علاج</option>
+          <option value="كشف">🔍 كشف / استشارة</option>
+          <option value="متابعة">📋 متابعة</option>
+        </select>
+      </div>
     </div>
     <div class="form-group">
       <label>🦷 السن / الأسنان</label>
@@ -1242,6 +1297,7 @@ async function savePay(fixId,fixName){
   const service=(document.getElementById('pay-s')?.value||'').trim();
   if(!service){alert('اختر الخدمة');return;}
   const drName=USER?.user_metadata?.name||document.getElementById('pay-dr')?.value?.trim()||'غير محدد';
+  const visitType=v('pay-vtype')||'علاج';
   const sat=v('pay-sat');
   const toothVal=(typeof tsGet==='function'?tsGet('pay-tooth'):null)||document.getElementById('tsv-pay-tooth')?.value?.trim()||null;
   await sb.from('payments').insert({
@@ -1252,7 +1308,8 @@ async function savePay(fixId,fixName){
     tooth_number:toothVal,
     notes:v('pay-n').trim(),
     recorded_by:USER?.email,
-    satisfaction_score:sat?Number(sat):null
+    satisfaction_score:sat?Number(sat):null,
+    visit_type:visitType
   });
   await autoUpdatePlanFromPayment(pid,service,remaining);
   closeModal();renderPage(CUR);
@@ -1628,11 +1685,49 @@ async function renderReports(){
           ${(moPays||[]).length>0?`<table style="width:100%;border-collapse:collapse"><thead><tr>${['المريض','الخدمة','المدفوع'].map(h=>`<th style="text-align:right;padding:5px 8px;font-size:10px;color:var(--muted);border-bottom:1px solid var(--border)">${h}</th>`).join('')}</tr></thead><tbody>${(moPays||[]).map(p=>`<tr style="border-bottom:1px solid #f1f5f9"><td style="padding:5px 8px;font-size:11.5px;font-weight:600">${esc(p.patient_name||'—')}</td><td style="padding:5px 8px;font-size:10.5px;color:var(--muted)">${esc(p.service||'—')}</td><td style="padding:5px 8px;font-size:11.5px;color:var(--success);font-weight:700">${fmt(p.paid_amount)}</td></tr>`).join('')}</tbody></table>`:`<div style="text-align:center;color:var(--muted);padding:18px;font-size:12px">لا مدفوعات</div>`}
         </div>
       </div>
+      <div class="rc"><h3>🦷 الإيراد حسب الخدمة — ${RPT_MONTH}</h3>
+        ${(()=>{
+          const svcMap={};
+          (moPays||[]).forEach(p=>{
+            if(!p.service)return;
+            const base=p.service.replace(' — تحصيل متبقي','').trim();
+            if(!svcMap[base])svcMap[base]=0;
+            svcMap[base]+=(p.paid_amount||0);
+          });
+          const sorted=Object.entries(svcMap).sort((a,b)=>b[1]-a[1]);
+          const total=sorted.reduce((s,[,v])=>s+v,0)||1;
+          if(!sorted.length)return'<div style="text-align:center;color:var(--muted);padding:18px;font-size:12px">لا بيانات</div>';
+          return sorted.map(([svc,amt])=>{
+            const pct=Math.round(amt/total*100);
+            return '<div class="metric-row"><span style="font-size:11.5px;font-weight:600">'+esc(svc)+'</span>'
+              +'<div style="display:flex;align-items:center;gap:6px">'
+              +'<div style="width:70px;height:6px;background:var(--border);border-radius:3px">'
+              +'<div style="width:'+pct+'%;height:100%;background:var(--teal);border-radius:3px"></div></div>'
+              +'<strong style="font-size:11px;color:var(--teal)">'+fmt(amt)+'</strong>'
+              +'<span style="font-size:10px;color:var(--muted)">'+pct+'%</span></div></div>';
+          }).join('');
+        })()}
+      </div>
       <div class="rc"><h3>🎯 CAC و LTV</h3>
         <div class="big-n">${fmt(cac)}</div><div class="big-l">تكلفة اكتساب مريض</div>
         <div class="formula">تسويق ÷ مرضى جدد<br>${fmt(mktMo)} ÷ ${newPts||0} = ${fmt(cac)}</div>
         <div class="metric-row" style="margin-top:12px"><span style="color:var(--muted);font-size:12px">LTV متوسط المريض</span><strong style="color:var(--teal)">${fmt(ltv)}</strong></div>
         <div class="metric-row"><span style="color:var(--muted);font-size:12px">نسبة LTV/CAC</span><strong style="color:${Number(ltvCac)>=3?'var(--success)':'var(--danger)'}">${ltvCac}x</strong></div>
+      </div>
+      <div class="rc"><h3>🔄 تحويل الكشف إلى علاج — ${RPT_MONTH}</h3>
+        ${(()=>{
+          const consultPts=new Set((moPays||[]).filter(p=>p.visit_type==='كشف').map(p=>p.patient_id));
+          const treatedPts=new Set((moPays||[]).filter(p=>p.visit_type==='علاج').map(p=>p.patient_id));
+          const converted=[...consultPts].filter(id=>treatedPts.has(id)).length;
+          const convRate=consultPts.size>0?Math.round(converted/consultPts.size*100):0;
+          const vtCounts={'كشف':0,'علاج':0,'متابعة':0};
+          (moPays||[]).forEach(p=>{const vt=p.visit_type||'علاج';if(vtCounts[vt]!==undefined)vtCounts[vt]++;});
+          return '<div class="metric-row"><span style="color:var(--muted);font-size:12px">زيارات كشف</span><strong>'+consultPts.size+' مريض</strong></div>'
+            +'<div class="metric-row"><span style="color:var(--muted);font-size:12px">زيارات علاج</span><strong style="color:var(--success)">'+treatedPts.size+' مريض</strong></div>'
+            +'<div class="metric-row"><span style="color:var(--muted);font-size:12px">تحولوا للعلاج</span><strong style="color:var(--teal)">'+converted+'</strong></div>'
+            +'<div class="big-n" style="font-size:28px;margin-top:8px;color:'+(convRate>=60?'var(--success)':convRate>=40?'var(--warning)':'var(--danger)')+'">'+convRate+'%</div>'
+            +'<div class="big-l">نسبة التحويل</div>';
+        })()}
       </div>
       <div class="rc"><h3>📈 الملخص الكلي</h3>
         <div class="metric-row"><span style="color:var(--muted);font-size:12px">إجمالي المرضى</span><strong>${totalPts||0}</strong></div>
@@ -1640,6 +1735,24 @@ async function renderReports(){
         <div class="metric-row"><span style="color:var(--muted);font-size:12px">إجمالي المصاريف</span><strong style="color:var(--danger)">${fmt(expTotal)}</strong></div>
         <div class="metric-row"><span style="color:var(--muted);font-size:12px">صافي الكلي</span><strong style="color:${income-expTotal>=0?'var(--teal)':'var(--danger)'}">${fmt(income-expTotal)}</strong></div>
       </div>
+    </div>
+    <div class="tbl-wrap" style="margin-top:16px">
+      <div class="tbl-hdr"><h3>📋 قيمة خطط العلاج مقابل المحصّل — ${RPT_MONTH}</h3></div>
+      ${await (async()=>{
+        const{data:moPlans}=await sb.from('treatment_plans').select('patient_id,items').gte('created_at',mo).lte('created_at',moEnd+'T23:59:59');
+        const planTotal=(moPlans||[]).reduce((s,pl)=>s+((pl.items||[]).reduce((ss,it)=>ss+(it.cost||0),0)),0);
+        const planCollected=(moPays||[]).filter(p=>p.visit_type==='علاج'||!p.visit_type).reduce((s,p)=>s+(p.paid_amount||0),0);
+        const planPending=(moPays||[]).filter(p=>(p.visit_type==='علاج'||!p.visit_type)&&p.remaining>0).reduce((s,p)=>s+(p.remaining||0),0);
+        const collRate=planTotal>0?Math.round(planCollected/planTotal*100):0;
+        return'<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;padding:14px 16px">'
+          +'<div style="text-align:center"><div style="font-size:20px;font-weight:900;color:var(--teal)">'+fmt(planTotal)+'</div><div style="font-size:11px;color:var(--muted)">قيمة الخطط</div></div>'
+          +'<div style="text-align:center"><div style="font-size:20px;font-weight:900;color:var(--success)">'+fmt(planCollected)+'</div><div style="font-size:11px;color:var(--muted)">تم تحصيله</div></div>'
+          +'<div style="text-align:center"><div style="font-size:20px;font-weight:900;color:var(--danger)">'+fmt(planPending)+'</div><div style="font-size:11px;color:var(--muted)">متبقي</div></div>'
+          +'</div>'
+          +'<div style="padding:0 16px 14px"><div style="height:10px;background:var(--border);border-radius:5px;overflow:hidden">'
+          +'<div style="width:'+collRate+'%;height:100%;background:var(--success);border-radius:5px"></div></div>'
+          +'<div style="text-align:center;margin-top:6px;font-size:12px;font-weight:700;color:'+(collRate>=80?'var(--success)':collRate>=60?'var(--warning)':'var(--danger)')+'">'+collRate+'% محصّل</div></div>';
+      })()}
     </div>
     <div class="tbl-wrap" style="margin-top:16px">
       <div class="tbl-hdr"><h3>👨‍⚕️ المرضى الجدد per طبيب — ${RPT_MONTH}</h3></div>
