@@ -1648,19 +1648,18 @@ async function renderReports(){
         const total=(moNewPtsDetail||[]).length||1;
         const sorted=Object.entries(drMap).sort((a,b)=>b[1]-a[1]);
         if(!sorted.length)return'<div style="text-align:center;color:var(--muted);padding:26px;font-size:12px">لا مرضى جدد</div>';
-        return\`<table><thead><tr><th>الترتيب</th><th>الطبيب</th><th>المرضى الجدد</th><th>النسبة</th><th>التمثيل البياني</th></tr></thead>
-        <tbody>\${sorted.map(([dr,cnt],i)=>{
+        const rows=sorted.map(([dr,cnt],i)=>{
           const pct=Math.round(cnt/total*100);
           const isNone=dr==='لم يزر بعد';
           const medal=i===0&&!isNone?'🥇':i===1&&!isNone?'🥈':i===2&&!isNone?'🥉':'';
-          return\`<tr>
-            <td style="font-size:18px;text-align:center">\${medal||i+1}</td>
-            <td style="font-weight:700;\${isNone?'color:var(--muted)':''}">\${esc(dr)}</td>
-            <td><strong style="font-size:16px;\${isNone?'color:var(--muted)':'color:var(--teal)'}">\${cnt}</strong></td>
-            <td><span class="badge \${isNone?'bgr':pct>=30?'bg':pct>=15?'bt':'bb'}">\${pct}%</span></td>
-            <td style="min-width:140px"><div style="height:8px;background:var(--border);border-radius:4px;overflow:hidden"><div style="width:\${pct}%;height:100%;background:\${isNone?'var(--muted)':'var(--teal)'};border-radius:4px"></div></div></td>
-          </tr>\`;
-        }).join('')}</tbody></table>\`;
+          return '<tr><td style="font-size:18px;text-align:center">'+(medal||(i+1))+'</td>'
+            +'<td style="font-weight:700'+(isNone?';color:var(--muted)':'')+'">'+esc(dr)+'</td>'
+            +'<td><strong style="font-size:16px;color:'+(isNone?'var(--muted)':'var(--teal)')+'">'+cnt+'</strong></td>'
+            +'<td><span class="badge '+(isNone?'bgr':pct>=30?'bg':pct>=15?'bt':'bb')+'">'+pct+'%</span></td>'
+            +'<td style="min-width:140px"><div style="height:8px;background:var(--border);border-radius:4px;overflow:hidden">'
+            +'<div style="width:'+pct+'%;height:100%;background:'+(isNone?'var(--muted)':'var(--teal)')+';border-radius:4px"></div></div></td></tr>';
+        }).join('');
+        return '<table><thead><tr><th>الترتيب</th><th>الطبيب</th><th>المرضى الجدد</th><th>النسبة</th><th>التمثيل البياني</th></tr></thead><tbody>'+rows+'</tbody></table>';
       })()}
     </div>
     <div class="tbl-wrap" style="margin-top:16px">
