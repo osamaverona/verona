@@ -1547,7 +1547,7 @@ function saveDrPct(name,pct){localStorage.setItem('dr_pct_'+name,Math.min(100,Ma
 async function renderReports(){
   const mo=RPT_MONTH+'-01';const moEnd=getMonthEnd(RPT_MONTH);
   const months=[];const d=new Date();for(let i=0;i<12;i++){const y=d.getFullYear(),m=String(d.getMonth()+1).padStart(2,'0');months.push(`${y}-${m}`);d.setMonth(d.getMonth()-1);}
-  const[{data:allPays},{data:moPays},{data:exps},{data:moExps},{count:totalPts},{count:newPts},{data:moPatients}]=await Promise.all([
+  const[{data:allPays},{data:moPays},{data:exps},{data:moExps},{count:totalPts},{count:newPts},{data:moPatients},{data:moRadios}]=await Promise.all([
     sb.from('payments').select('paid_amount,patient_id,date').order('date',{ascending:true}),
     sb.from('payments').select('*').gte('date',mo).lte('date',moEnd),
     sb.from('expenses').select('amount'),
@@ -1555,6 +1555,7 @@ async function renderReports(){
     sb.from('patients').select('*',{count:'exact',head:true}),
     sb.from('patients').select('*',{count:'exact',head:true}).gte('created_at',mo).lte('created_at',moEnd),
     sb.from('patients').select('name,acquisition_source,source_page').gte('created_at',mo).lte('created_at',moEnd),
+    sb.from('radiology_orders').select('*').gte('date',mo).lte('date',moEnd),
   ]);
   const{data:moNewPtsDetail}=await sb.from('patients').select('id,name,acquisition_source,source_page,created_at,phone').gte('created_at',mo).lte('created_at',moEnd).order('created_at',{ascending:false});
   const newPtIds=(moNewPtsDetail||[]).map(p=>p.id);
@@ -1598,6 +1599,7 @@ async function renderReports(){
       <div class="card"><div class="lbl">👥 مرضى جدد</div><div class="val">${newPts||0}</div></div>
       <div class="card"><div class="lbl">💳 دفعوا الشهر</div><div class="val">${moPaidPts}</div></div>
       <div class="card" style="border-right-color:var(--warning)"><div class="lbl">🎯 CAC</div><div class="val" style="font-size:15px">${fmt(cac)}</div></div>
+      <div class="card" style="border-right-color:#0891b2"><div class="lbl">📡 إيرادات الأشعة</div><div class="val" style="font-size:15px;color:#0891b2">${fmt((moRadios||[]).reduce((s,r)=>s+(r.cost||0),0))}</div><div class="sub">${(moRadios||[]).length} أشعة</div></div>
       <div class="card" style="border-right-color:var(--teal)"><div class="lbl">🔄 معدل العودة</div><div class="val" style="font-size:18px;color:${returnRateAll>=40?'var(--success)':returnRateAll>=20?'var(--warning)':'var(--danger)'}">${returnRateAll}%</div><div class="sub">${returningPtsCount} من ${uniquePay} مريض — بعد شهرين</div></div>
     </div>
     <div class="tbl-wrap" style="margin-bottom:16px">
@@ -1633,6 +1635,22 @@ async function renderReports(){
         <div class="metric-row"><span style="color:var(--muted);font-size:12px">إجمالي المصاريف</span><strong style="color:var(--danger)">${fmt(expTotal)}</strong></div>
         <div class="metric-row"><span style="color:var(--muted);font-size:12px">صافي الكلي</span><strong style="color:${income-expTotal>=0?'var(--teal)':'var(--danger)'}">${fmt(income-expTotal)}</strong></div>
       </div>
+    </div>
+    <div class="tbl-wrap" style="margin-top:16px">
+      <div class="tbl-hdr"><h3>📡 الأشعة — ${RPT_MONTH} (${(moRadios||[]).length})</h3></div>
+      ${(moRadios||[]).length>0?`
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;padding:12px 16px;border-bottom:1px solid var(--border)">
+        <div style="text-align:center"><div style="font-size:22px;font-weight:900;color:#0891b2">${(moRadios||[]).filter(r=>r.type==='CBCT').length}</div><div style="font-size:11px;color:var(--muted)">CBCT</div></div>
+        <div style="text-align:center"><div style="font-size:22px;font-weight:900;color:#1d4ed8">${(moRadios||[]).filter(r=>r.type==='OPG').length}</div><div style="font-size:11px;color:var(--muted)">OPG</div></div>
+        <div style="text-align:center"><div style="font-size:22px;font-weight:900;color:var(--teal)">${fmt((moRadios||[]).reduce((s,r)=>s+(r.cost||0),0))}</div><div style="font-size:11px;color:var(--muted)">إجمالي الإيراد</div></div>
+      </div>
+      <table><thead><tr><th>النوع</th><th>الطبيب المحيل</th><th>عدد الأشعة</th><th>الإيراد</th></tr></thead>
+      <tbody>${Object.entries((moRadios||[]).reduce((acc,r)=>{const k=r.doctor_name||'—';if(!acc[k])acc[k]={count:0,cost:0};acc[k].count++;acc[k].cost+=(r.cost||0);return acc;},{})).sort((a,b)=>b[1].count-a[1].count).map(([dr,d])=>`<tr>
+        <td>—</td><td style="font-weight:700">${esc(dr)}</td>
+        <td><strong>${d.count}</strong></td>
+        <td style="color:var(--teal);font-weight:700">${fmt(d.cost)}</td>
+      </tr>`).join('')}</tbody></table>`
+      :`<div style="text-align:center;color:var(--muted);padding:26px;font-size:12px">لا أشعة هذا الشهر</div>`}
     </div>
     <div class="tbl-wrap" style="margin-top:16px">
       <div class="tbl-hdr"><h3>📣 مصادر معرفة المركز — إجمالي ${allTotal} مريض</h3></div>
