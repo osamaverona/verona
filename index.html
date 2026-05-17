@@ -1052,6 +1052,22 @@ async function modalEditPatient(pid){
     </div>
     <div class="form-group"><label>🩺 الطبيب الفاحص</label><select id="ep-examdr"><option value="">اختر</option>${DOCTORS_LIST.map(d=>`<option value="${d}" ${p.examining_doctor===d?'selected':''}>${d}</option>`).join('')}</select></div>
     <div class="form-group"><label>ملاحظات</label><textarea id="ep-no" rows="2">${esc(p.notes||'')}</textarea></div>
+    <div style="background:#fef2f2;border-radius:8px;padding:9px;margin-bottom:12px">
+      <label style="display:flex;align-items:center;gap:7px;font-size:12px;font-weight:600;cursor:pointer">
+        <input type="checkbox" id="ep-refused" style="width:auto;accent-color:var(--danger)" ${p.refused_treatment?'checked':''} onchange="document.getElementById('ep-refblock').style.display=this.checked?'block':'none'"> ⚠ رفض العلاج
+      </label>
+      <div id="ep-refblock" style="display:${p.refused_treatment?'block':'none'};margin-top:8px">
+        <select id="ep-refreason" style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;font-family:Cairo,sans-serif">
+          <option value="">اختر السبب</option>
+          <option ${p.refusal_reason==='السعر مرتفع'?'selected':''}>السعر مرتفع</option>
+          <option ${p.refusal_reason==='الخوف من العلاج'?'selected':''}>الخوف من العلاج</option>
+          <option ${p.refusal_reason==='جاء للاستشارة فقط'?'selected':''}>جاء للاستشارة فقط</option>
+          <option ${p.refusal_reason==='يريد التفكير'?'selected':''}>يريد التفكير</option>
+          <option ${p.refusal_reason==='راجع مكان آخر'?'selected':''}>راجع مكان آخر</option>
+          <option ${p.refusal_reason==='أخرى'?'selected':''}>أخرى</option>
+        </select>
+      </div>
+    </div>
     <div class="form-actions">
       <button class="btn btn-outline" onclick="closeModal()">إلغاء</button>
       <button class="btn btn-primary" onclick="saveEditPatient('${pid}')">حفظ</button>
@@ -1059,7 +1075,8 @@ async function modalEditPatient(pid){
 }
 async function saveEditPatient(pid){
   const name=v('ep-n').trim();if(!name){alert('أدخل الاسم');return;}
-  await sb.from('patients').update({name,phone:v('ep-p').trim(),dob:v('ep-d')||null,address:v('ep-a').trim(),acquisition_source:v('ep-src'),source_page:v('ep-sp').trim(),notes:v('ep-no').trim(),examining_doctor:v('ep-examdr')||null}).eq('id',pid);
+  const epRefused=document.getElementById('ep-refused')?.checked||false;
+  await sb.from('patients').update({name,phone:v('ep-p').trim(),dob:v('ep-d')||null,address:v('ep-a').trim(),acquisition_source:v('ep-src'),source_page:v('ep-sp').trim(),notes:v('ep-no').trim(),examining_doctor:v('ep-examdr')||null,refused_treatment:epRefused,refusal_reason:epRefused?(v('ep-refreason')||null):null}).eq('id',pid);
   closeModal();openPatient(pid);
 }
 function modalEditFollowup(pid,date,note,refused){
