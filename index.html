@@ -1658,7 +1658,7 @@ async function renderReports(){
   const srcMap={};(moPatients||[]).forEach(p=>{const src=p.acquisition_source||p.source_page||'';if(!src)return;if(!srcMap[src])srcMap[src]=0;srcMap[src]++;});
   const srcList=Object.entries(srcMap).sort((a,b)=>b[1]-a[1]);
   const moPaidPts=[...new Set((moPays||[]).map(p=>p.patient_id))].length;
-  const{data:allPatients}=await sb.from('patients').select('acquisition_source,source_page');
+  const{data:allPatients}=await sb.from('patients').select('acquisition_source,source_page').range(0,9999);
   const allSrcMap={};(allPatients||[]).forEach(p=>{const src=p.acquisition_source||p.source_page||'';if(!src)return;if(!allSrcMap[src])allSrcMap[src]=0;allSrcMap[src]++;});
   const allSrcList=Object.entries(allSrcMap).sort((a,b)=>b[1]-a[1]);
   const allTotal=(allPatients||[]).length;
@@ -1842,7 +1842,7 @@ function calcIndependentVisits(dates){
 // ── BD Report ─────────────────────────────────────────
 async function renderBD(){
   const[{data:patients},{data:payments}]=await Promise.all([
-    sb.from('patients').select('id,acquisition_source,source_page,created_at'),
+    sb.from('patients').select('id,acquisition_source,source_page,created_at').range(0,9999),
     sb.from('payments').select('patient_id,paid_amount,date').order('date',{ascending:true}),
   ]);
   const payMap={};
@@ -2000,7 +2000,7 @@ async function renderAnalytics(){
   const endDate=lastDay.toISOString().slice(0,10);
   const[{data:pays},{data:patients},{data:exps}]=await Promise.all([
     sb.from('payments').select('paid_amount,patient_id,service,doctor_name,date').gte('date',startDate).lte('date',endDate),
-    sb.from('patients').select('id,acquisition_source,source_page,created_at'),
+    sb.from('patients').select('id,acquisition_source,source_page,created_at').range(0,9999),
     sb.from('expenses').select('amount,date').gte('date',startDate).lte('date',endDate),
   ]);
   const moRev=months.map(mo=>(pays||[]).filter(p=>p.date?.startsWith(mo)).reduce((s,p)=>s+(p.paid_amount||0),0));
