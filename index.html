@@ -160,6 +160,28 @@ tr:hover td{background:#f8fafc}
 .mobile-nav-btn.active{color:var(--teal2)}
 .mobile-nav-btn svg{width:19px;height:19px}
 @media print{.sidebar,.page-hdr,.btn,.mobile-nav{display:none!important}.main{padding:0}.page-body{padding:8px}}
+.ap-grid{display:flex;overflow-x:auto;padding:0 10px 12px}
+.ap-timecol{flex-shrink:0;width:50px;padding-top:34px}
+.ap-timecell{font-size:10px;color:var(--muted);text-align:left;padding-left:4px;border-top:1px solid #f1f5f9}
+.ap-cols{display:flex;gap:6px;flex:1;min-width:0}
+.ap-col{flex:1;min-width:168px}
+.ap-colhdr{height:34px;display:flex;align-items:center;justify-content:center;gap:6px;font-size:12px;font-weight:800;background:#f8fafc;border-radius:8px 8px 0 0}
+.ap-colbody{position:relative;background:#fff;border:1px solid var(--border);border-radius:0 0 8px 8px}
+.ap-slot{border-top:1px solid #f1f5f9;cursor:pointer}
+.ap-slot:hover{background:#f0fdfa}
+.ap-block{position:absolute;background:#fff;border:1px solid var(--border);border-radius:7px;padding:3px 6px;overflow:hidden;cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,.06)}
+.ap-block:hover{box-shadow:0 5px 14px rgba(0,0,0,.16);z-index:5}
+.ap-b-t{font-weight:800;color:var(--muted);font-size:9.5px}
+.ap-b-n{font-weight:800;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ap-b-s{display:flex;gap:4px;align-items:center;font-size:9.5px;white-space:nowrap;overflow:hidden}
+.ap-mhdr{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;padding:0 10px 6px;font-size:11px;font-weight:800;color:var(--muted);text-align:center}
+.ap-month{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;padding:0 10px 12px}
+.ap-mcell{min-height:78px;border:1px solid var(--border);border-radius:8px;padding:5px;cursor:pointer;background:#fff}
+.ap-mcell:hover{border-color:var(--teal)}
+.ap-mdim{background:#f8fafc;border:none;cursor:default}
+.ap-mtoday{border:2px solid var(--teal);background:#f0fdfa}
+@media(max-width:768px){.ap-col{min-width:148px}.ap-mcell{min-height:60px;font-size:10px}}
+
 
 .teeth-sel{background:#f8fafc;border:1.5px solid var(--border);border-radius:9px;padding:10px 8px;margin-bottom:4px}
 .ts-jaw-lbl{font-size:9px;color:var(--muted);font-weight:700;text-align:center;margin-bottom:3px}
@@ -232,6 +254,7 @@ tr:hover td{background:#f8fafc}
 const CFG='verona_cfg_v2';
 let sb=null,USER=null,ROLE='reception',RT=null,CUR='dashboard';
 let PT_PAGE=1,PT_SEARCH='',PT_FILTER='all',RPT_MONTH=todayStr().slice(0,7);
+let DOCTORS=[],MY_DR=null,APPT_DATE=todayStr(),APPT_MONTH=todayStr().slice(0,7),APPT_VIEW='day',APPT_DR='all';
 let CHARTS={},PLI_CTR=0;
 const PT_PER=50;
 
@@ -261,6 +284,7 @@ const NAV={
     {k:'dashboard',l:'لوحة التحكم',d:'M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z M9 22V12h6v10'},
     {k:'patients', l:'المرضى',d:'M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2 M9 11a4 4 0 100-8 4 4 0 000 8'},
     {k:'appts',    l:'المواعيد',d:'M8 2v4M16 2v4M3 10h18M5 4h14a2 2 0 012 2v14a2 2 0 01-2 2H5a2 2 0 01-2-2V6a2 2 0 012-2z'},
+    {k:'pending',  l:'مرضى بلا موعد',d:'M22 12h-4l-3 9L9 3l-3 9H2'},
     {k:'payments', l:'المدفوعات',d:'M12 1v22M17 5H9.5a3.5 3.5 0 100 7h5a3.5 3.5 0 110 7H6'},
     {k:'debts',    l:'الديون',d:'M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z'},
     {k:'expenses', l:'المصاريف',d:'M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82z'},
@@ -277,6 +301,7 @@ const NAV={
   reception:[
     {k:'patients', l:'المرضى',d:'M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2 M9 11a4 4 0 100-8 4 4 0 000 8'},
     {k:'appts',    l:'المواعيد',d:'M8 2v4M16 2v4M3 10h18M5 4h14a2 2 0 012 2v14a2 2 0 01-2 2H5a2 2 0 01-2-2V6a2 2 0 012-2z'},
+    {k:'pending',  l:'مرضى بلا موعد',d:'M22 12h-4l-3 9L9 3l-3 9H2'},
     {k:'payments', l:'المدفوعات',d:'M12 1v22M17 5H9.5a3.5 3.5 0 100 7h5a3.5 3.5 0 110 7H6'},
     {k:'debts',    l:'الديون',d:'M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z'},
   ],
@@ -285,7 +310,8 @@ const NAV={
 const TITLES={
   dashboard:['لوحة التحكم','نظرة عامة على أداء المركز'],
   patients:['المرضى','إدارة ملفات وبيانات المرضى'],
-  appts:['المواعيد','جدول المواعيد — تنبيه الغد تلقائي'],
+  appts:['المواعيد','جدول لكل طبيب · يومي وشهري · تذكير الغد'],
+  pending:['مرضى بلا موعد','متابعة من لم يحضر أو ألغى أو لم يرد'],
   payments:['المدفوعات','سجل المدفوعات الكامل'],
   debts:['الديون المعلقة','المرضى الذين لديهم أرصدة غير مكتملة'],
   expenses:['المصاريف','نفقات المركز التشغيلية والتسويقية'],
@@ -324,7 +350,7 @@ async function doLogin(){
 }
 async function doLogout(){await sb.auth.signOut();USER=null;showLogin();}
 
-function buildApp(){
+async function buildApp(){
   document.getElementById('u-name').textContent=USER.user_metadata?.name||USER.email;
   document.getElementById('u-role').textContent={admin:'(مدير)',doctor:'(طبيب)',reception:'(استقبال)'}[ROLE]||'';
   const items=NAV[ROLE]||NAV.reception;
@@ -335,6 +361,7 @@ function buildApp(){
   mn.innerHTML=items.map(p=>
     `<button class="mobile-nav-btn" id="mnav-${p.k}" onclick="nav('${p.k}')">${icon(p.d,19)}<span>${p.l.split(' ')[0]}</span></button>`
   ).join('');
+  await loadDoctors();
   nav(items[0].k);setupRT();
 }
 
@@ -351,7 +378,7 @@ function nav(page){
 }
 async function renderPage(page){
   document.getElementById('pg-content').innerHTML='<div class="loading"><div class="spin"></div>تحميل...</div>';
-  const fn={dashboard:renderDash,patients:renderPatients,appts:renderAppts,payments:renderPayments,debts:renderDebts,expenses:renderExpenses,doctors:renderDoctors,reports:renderReports,bd:renderBD,analytics:renderAnalytics};
+  const fn={dashboard:renderDash,patients:renderPatients,appts:renderAppts,pending:renderPending,payments:renderPayments,debts:renderDebts,expenses:renderExpenses,doctors:renderDoctors,reports:renderReports,bd:renderBD,analytics:renderAnalytics};
   await(fn[page]||renderDash)();
 }
 function setupRT(){
@@ -366,6 +393,14 @@ function setupRT(){
     })
     .on('postgres_changes',{event:'UPDATE',schema:'public',table:'payments'},()=>{if(['payments','dashboard','debts'].includes(CUR))renderPage(CUR);})
     .on('postgres_changes',{event:'*',schema:'public',table:'appointments'},()=>{if(['appts','dashboard'].includes(CUR))renderPage(CUR);})
+    .on('postgres_changes',{event:'INSERT',schema:'public',table:'appointment_events'},(payload)=>{
+      const e=payload.new;
+      if(ROLE==='reception'||ROLE==='admin'){
+        showNotification('🔔 '+(e.action||'تعديل')+' — '+(e.patient_name||'مريض')+' — '+(e.doctor_name||'')+' — '+(e.appointment_date||''));
+        if(CUR==='appts')renderPage(CUR);
+      }
+    })
+    .on('postgres_changes',{event:'*',schema:'public',table:'pending_patients'},()=>{if(['pending','appts'].includes(CUR))renderPage(CUR);})
     .subscribe();
 }
 
@@ -389,7 +424,7 @@ async function renderDash(){
     sb.from('patients').select('*',{count:'exact',head:true}),
     sb.from('payments').select('*').gte('date',mo),
     sb.from('expenses').select('*').gte('date',mo),
-    sb.from('appointments').select('*').eq('date',todayStr()),
+    sb.from('appointments').select('*').eq('date',todayStr()).order('start_time'),
     sb.from('payments').select('patient_id,patient_name,remaining').gt('remaining',0),
     sb.from('appointments').select('*').eq('date',yesterdayStr).order('time'),
   ]);
@@ -452,12 +487,13 @@ async function renderDash(){
       </div>
       <div class="tbl-wrap">
         <div class="tbl-hdr"><h3>مواعيد اليوم</h3></div>
-        <table><thead><tr><th>المريض</th><th>الوقت</th><th>الخدمة</th><th>الحالة</th></tr></thead>
-        <tbody>${(appts||[]).map(a=>`<tr>
-          <td style="font-weight:700">${esc(a.patient_name||'—')}</td><td dir="ltr">${a.time||'—'}</td>
+        <table><thead><tr><th>المريض</th><th>الوقت</th><th>الطبيب</th><th>الخدمة</th><th>الحالة</th></tr></thead>
+        <tbody>${(appts||[]).map(a=>`<tr style="cursor:pointer" onclick="openApptById('${a.id}')">
+          <td style="font-weight:700">${esc(a.patient_name||'—')}</td><td dir="ltr">${hhmm(a.start_time)||esc(a.time||'—')}</td>
+          <td style="font-size:11px">${esc(a.doctor_id?drNm(a.doctor_id):(a.doctor_name||'—'))}</td>
           <td>${esc(a.service||'—')}</td>
-          <td><span class="badge ${a.status==='مؤكد'?'bg':'by'}">${a.status}</span></td>
-        </tr>`).join('')||nr(4,'لا مواعيد')}</tbody></table>
+          <td><span class="badge ${stCls(a.status)}">${a.status}</span></td>
+        </tr>`).join('')||nr(5,'لا مواعيد')}</tbody></table>
       </div>
     </div>
     ${incompletePlansSec}
@@ -471,10 +507,10 @@ async function renderDash(){
       <table><thead><tr><th>المريض</th><th>الوقت</th><th>الخدمة</th><th>الطبيب</th><th>الحالة</th></tr></thead>
       <tbody>${(yesterdayAppts||[]).map(a=>`<tr onclick="openPatient('${a.patient_id}')">
         <td style="font-weight:700">${esc(a.patient_name||'—')}</td>
-        <td dir="ltr">${a.time||'—'}</td>
+        <td dir="ltr">${hhmm(a.start_time)||esc(a.time||'—')}</td>
         <td><span class="badge bgr">${esc(a.service||'—')}</span></td>
-        <td style="color:var(--muted);font-size:11px">${esc(a.doctor_name||'—')}</td>
-        <td><span class="badge ${a.status==='مكتمل'?'bg':a.status==='ملغي'?'br':'by'}">${a.status}</span></td>
+        <td style="color:var(--muted);font-size:11px">${esc(a.doctor_id?drNm(a.doctor_id):(a.doctor_name||'—'))}</td>
+        <td><span class="badge ${stCls(a.status)}">${a.status}</span></td>
       </tr>`).join('')}</tbody></table>
     </div>`:''}`;
 }
@@ -579,7 +615,7 @@ async function openPatient(id){
       </div>
       <div style="display:flex;gap:6px;flex-wrap:wrap">
         ${ROLE!=='reception'?`<button class="btn btn-primary btn-sm" onclick="modalAddPayment('${id}','${esc(p.name)}')">+ دفعة</button>`:''}
-        <button class="btn btn-outline btn-sm" onclick="modalAddApptSingle('${id}','${esc(p.name)}')">+ موعد</button>
+        <button class="btn btn-outline btn-sm" onclick="openApptModal({patient_id:'${id}',patient_name:'${esc(p.name)}'})">+ موعد</button>
         ${ROLE!=='reception'?`<button class="btn btn-outline btn-sm" onclick="modalAddPlan('${id}','${esc(p.name)}')">+ خطة علاج</button>`:''}
         <button class="btn btn-outline btn-sm" onclick="printRx('${id}','${esc(p.name)}')">🖨 وصفة</button>
         <button class="btn btn-outline btn-sm" onclick="sendWhatsApp('${esc(p.phone||'')}','${esc(p.name)}')">💬 واتساب</button>
@@ -735,11 +771,12 @@ async function openPatient(id){
         </div>
         <div class="tbl-wrap">
           <div class="tbl-hdr"><h3>المواعيد</h3></div>
-          <table><thead><tr><th>التاريخ</th><th>الخدمة</th><th>الطبيب</th><th>الحالة</th></tr></thead>
-          <tbody>${(appts||[]).map(a=>`<tr>
-            <td>${a.date}</td><td>${esc(a.service||'—')}</td><td>${esc(a.doctor_name||'—')}</td>
-            <td><span class="badge ${a.status==='مؤكد'?'bg':'by'}">${a.status}</span></td>
-          </tr>`).join('')||nr(4,'لا مواعيد')}</tbody></table>
+          <table><thead><tr><th>التاريخ</th><th>الوقت</th><th>الخدمة</th><th>الطبيب</th><th>الحالة</th></tr></thead>
+          <tbody>${(appts||[]).map(a=>`<tr style="cursor:pointer" onclick="openApptById('${a.id}')">
+            <td>${a.date}</td><td dir="ltr">${hhmm(a.start_time)||esc(a.time||'—')}</td><td>${esc(a.service||'—')}</td>
+            <td>${esc(a.doctor_id?drNm(a.doctor_id):(a.doctor_name||'—'))}</td>
+            <td><span class="badge ${stCls(a.status)}">${a.status}</span></td>
+          </tr>`).join('')||nr(5,'لا مواعيد')}</tbody></table>
         </div>
       </div>
       <div class="info-section">
@@ -1020,7 +1057,7 @@ async function savePatient(){
   if(!v('p-examdr')){alert('الطبيب الفاحص إلزامي — على أي طبيب دخل المريض؟');return;}
   const{count}=await sb.from('patients').select('*',{count:'exact',head:true});
   const pNum='V-'+String((count||0)+1).padStart(4,'0');
-  await sb.from('patients').insert({
+  const{data:np}=await sb.from('patients').insert({
     name,phone:v('pp').trim(),phone2:v('pp2').trim(),dob:v('pd')||null,
     address:v('pa').trim(),acquisition_source:v('ps'),source_page:v('psrc').trim(),
     followup_date:v('pfup')||null,followup_note:v('pfupn').trim(),
@@ -1034,7 +1071,11 @@ async function savePatient(){
     has_diabetes:document.getElementById('p-diabetes')?.checked||false,
     has_hypertension:document.getElementById('p-hyper')?.checked||false,
     has_heart_disease:document.getElementById('p-heart')?.checked||false,
-  });
+  }).select().maybeSingle();
+  if(window.CONVERT_APPT&&np){
+    await sb.from('appointments').update({patient_id:np.id,patient_code:pNum,patient_name:name,patient_phone:null,is_unregistered:false,updated_by:apptActor(),updated_by_role:ROLE}).eq('id',window.CONVERT_APPT);
+    window.CONVERT_APPT=null;closeModal();alert('تم إنشاء الملف '+pNum+' وربطه بالموعد');nav('appts');return;
+  }
   closeModal();PT_PAGE=1;renderPatients();
 }
 async function modalEditPatient(pid){
@@ -1137,72 +1178,478 @@ async function uploadFile(pid,input){
   openPatient(pid);
 }
 
-// ── Appointments ──────────────────────────────────────
-async function renderAppts(){
-  const today=todayStr(),tmrw=tomorrowStr();
-  const[{data:appts},{data:tmrwA},{data:pts}]=await Promise.all([
-    sb.from('appointments').select('*').order('date').order('time'),
-    sb.from('appointments').select('*').eq('date',tmrw).neq('status','ملغي').order('time'),
-    sb.from('patients').select('id,name').order('name').limit(500),
-  ]);
-  document.getElementById('pg-content').innerHTML=`
-    ${(tmrwA||[]).length>0?`<div class="alert a-info" style="margin-bottom:14px">
-      <div><strong>📅 مواعيد الغد — ${tmrwA.length} موعد</strong>
-      <div style="margin-top:7px;display:flex;flex-direction:column;gap:4px">
-        ${(tmrwA||[]).map(a=>`<div style="display:flex;gap:8px;font-size:12px">
-          <strong>${esc(a.patient_name||'—')}</strong><span dir="ltr" style="color:var(--muted)">${a.time||'—'}</span>
-          <span class="badge bgr">${esc(a.service||'—')}</span><span style="color:var(--muted)">${esc(a.doctor_name||'—')}</span>
-          <a href="https://wa.me/964${(a.patient_phone||'').replace(/^0/,'').replace(/\D/g,'')}?text=${encodeURIComponent('تذكير موعدكم غداً في عيادات ڤيرونا 🦷')}" target="_blank" onclick="event.stopPropagation()" class="badge bg" style="text-decoration:none">💬</a>
-        </div>`).join('')}
-      </div></div></div>`:''}
-    <div style="display:flex;justify-content:flex-end;margin-bottom:13px">
-      <button class="btn btn-primary" onclick="modalAddAppt(${JSON.stringify((pts||[]).map(p=>p.id+'|'+p.name))})">+ موعد</button>
-    </div>
-    <div class="tbl-wrap">
-      <div class="tbl-hdr"><h3>المواعيد (${(appts||[]).length})</h3></div>
-      <table><thead><tr><th>المريض</th><th>التاريخ</th><th>الوقت</th><th>الخدمة</th><th>الطبيب</th><th>الحالة</th><th>تحديث</th></tr></thead>
-      <tbody>${(appts||[]).map(a=>`<tr style="${a.date===today?'background:#f0fdf4':a.date===tmrw?'background:#eff6ff':''}">
-        <td style="font-weight:700">${esc(a.patient_name||'—')}</td>
-        <td>${a.date===today?'<span class="badge bg">اليوم</span>':a.date===tmrw?'<span class="badge bb">الغد</span>':a.date}</td>
-        <td dir="ltr">${a.time||'—'}</td>
-        <td><span class="badge bgr">${esc(a.service||'—')}</span></td>
-        <td>${esc(a.doctor_name||'—')}</td>
-        <td><span class="badge ${a.status==='مؤكد'?'bg':a.status==='مكتمل'?'bt':a.status==='انتظار'?'by':'br'}">${a.status}</span></td>
-        <td><select style="font-size:11px;padding:3px 6px;border:1px solid var(--border);border-radius:6px;font-family:'Cairo',sans-serif" onchange="updAppt('${a.id}',this.value)">
-          ${['مؤكد','انتظار','مكتمل','ملغي'].map(s=>`<option ${a.status===s?'selected':''}>${s}</option>`).join('')}
-        </select></td>
-      </tr>`).join('')||nr(7)}</tbody></table>
-    </div>`;
+// ── Appointments v2 ───────────────────────────────────
+const DAY_START=9,DAY_END=23,SLOT_MIN=30,SLOT_PX=34;
+const APPT_STATUS=['انتظار','مؤكد','تم التواصل','تم التأجيل','حضر','لم يحضر','ملغي'];
+const CONTACT_OPTS=['لم يتم التواصل','تم التواصل','مؤكد','لم يرد','لم يقرر موعده بعد'];
+const stCls=s=>({'مؤكد':'bg','تم التواصل':'bt','حضر':'bg','انتظار':'by','تم التأجيل':'bo','لم يحضر':'br','ملغي':'br','مكتمل':'bt'}[s]||'bgr');
+const hhmm=t=>t?String(t).slice(0,5):'';
+const toMin=t=>{if(!t)return null;const p=String(t).slice(0,5).split(':');return (+p[0])*60+(+p[1]);};
+const minT=m=>String(Math.floor(m/60)).padStart(2,'0')+':'+String(m%60).padStart(2,'0');
+const drById=id=>DOCTORS.find(d=>d.id===id);
+const drNm=id=>drById(id)?.name||'—';
+const drClr=id=>drById(id)?.color||'#64748b';
+const apptActor=()=>USER?.user_metadata?.name||USER?.email||'—';
+const canEditAppt=a=>ROLE!=='doctor'||(!!MY_DR&&a.doctor_id===MY_DR.id);
+const visibleDoctors=()=>ROLE==='doctor'?(MY_DR?[MY_DR]:[]):(APPT_DR==='all'?DOCTORS:DOCTORS.filter(d=>d.id===APPT_DR));
+const waLink=(phone,msg)=>'https://wa.me/964'+String(phone||'').replace(/^0/,'').replace(/\D/g,'')+'?text='+encodeURIComponent(msg);
+
+async function loadDoctors(){
+  const{data}=await sb.from('doctors').select('*').order('sort_order',{ascending:true}).order('name');
+  DOCTORS=(data||[]).filter(d=>d.is_active!==false);
+  MY_DR=DOCTORS.find(d=>d.auth_user_id===USER?.id)||DOCTORS.find(d=>d.name===(USER?.user_metadata?.name||''))||null;
 }
-function modalAddApptSingle(pid,pname){modalAddAppt([`${pid}|${pname}`],pid);}
-function modalAddAppt(ptArr,fixId=''){
-  const svcs=['تنظيف','حشو','تقويم','زراعة','تجميل','خلع','علاج عصب','تيجان','تبييض','أخرى'];
-  modal('موعد جديد',`
-    <div class="form-group"><label>المريض *</label>
-      ${fixId?`<input value="${ptArr[0]?.split('|')[1]||''}" readonly style="background:#f8fafc;color:var(--muted)"><input type="hidden" id="apt-p" value="${ptArr[0]}">`:
-        `<select id="apt-p"><option value="">اختر</option>${ptArr.map(s=>{const[id,n]=s.split('|');return`<option value="${id}|${n}">${n}</option>`;}).join('')}</select>`}
+
+function shiftApptDate(n){const d=new Date(APPT_DATE+'T12:00:00');d.setDate(d.getDate()+n);APPT_DATE=d.toISOString().slice(0,10);renderAppts();}
+function shiftApptMonth(n){const d=new Date(APPT_MONTH+'-01T12:00:00');d.setMonth(d.getMonth()+n);APPT_MONTH=d.toISOString().slice(0,7);renderAppts();}
+function setApptView(v){APPT_VIEW=v;renderAppts();}
+function setApptDate(v){if(v){APPT_DATE=v;APPT_VIEW='day';renderAppts();}}
+function setApptDr(v){APPT_DR=v;renderAppts();}
+function jumpToDay(d){APPT_DATE=d;APPT_VIEW='day';renderAppts();}
+
+async function fetchApptPhones(list){
+  const ids=[...new Set((list||[]).filter(a=>a.patient_id).map(a=>a.patient_id))];
+  if(!ids.length)return {};
+  const{data}=await sb.from('patients').select('id,phone,phone2').in('id',ids);
+  const m={};(data||[]).forEach(p=>m[p.id]=p.phone||p.phone2||'');
+  return m;
+}
+
+async function renderAppts(){
+  if(!DOCTORS.length)await loadDoctors();
+  const el=document.getElementById('pg-content');
+  if(ROLE==='doctor'&&!MY_DR){el.innerHTML='<div class="alert a-warn">حسابك غير مرتبط بسجل طبيب في جدول الأطباء. راجع المدير لربط الحساب.</div>';return;}
+  const panels=ROLE!=='doctor'?await apptPanels():'';
+  const body=APPT_VIEW==='month'?await apptMonthView():await apptDayView();
+  el.innerHTML=panels+apptToolbar()+body;
+}
+
+function apptToolbar(){
+  const isDay=APPT_VIEW==='day';
+  const drSel=ROLE==='doctor'?'':`<select onchange="setApptDr(this.value)" style="padding:7px 9px;border:1.5px solid var(--border);border-radius:8px;font-family:'Cairo',sans-serif;font-size:12px">
+      <option value="all" ${APPT_DR==='all'?'selected':''}>كل الأطباء</option>
+      ${DOCTORS.map(d=>`<option value="${d.id}" ${APPT_DR===d.id?'selected':''}>${esc(d.name)}</option>`).join('')}
+    </select>`;
+  const nav=isDay
+    ?`<button class="btn btn-outline btn-sm" onclick="shiftApptDate(-1)">‹ السابق</button>
+      <input type="date" value="${APPT_DATE}" onchange="setApptDate(this.value)" style="padding:6px 9px;border:1.5px solid var(--border);border-radius:8px;font-family:'Cairo',sans-serif;font-size:12px">
+      <button class="btn btn-outline btn-sm" onclick="shiftApptDate(1)">التالي ›</button>
+      <button class="btn btn-outline btn-sm" onclick="setApptDate('${todayStr()}')">اليوم</button>`
+    :`<button class="btn btn-outline btn-sm" onclick="shiftApptMonth(-1)">‹ السابق</button>
+      <strong style="font-size:13px">${APPT_MONTH}</strong>
+      <button class="btn btn-outline btn-sm" onclick="shiftApptMonth(1)">التالي ›</button>`;
+  return `<div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between;margin-bottom:13px">
+    <div style="display:flex;gap:7px;align-items:center;flex-wrap:wrap">${nav}${drSel}</div>
+    <div style="display:flex;gap:7px;align-items:center">
+      <div style="display:flex;border:1.5px solid var(--border);border-radius:8px;overflow:hidden">
+        <button class="btn btn-sm" style="border-radius:0;background:${isDay?'var(--teal)':'#fff'};color:${isDay?'#fff':'var(--text)'}" onclick="setApptView('day')">يومي</button>
+        <button class="btn btn-sm" style="border-radius:0;background:${!isDay?'var(--teal)':'#fff'};color:${!isDay?'#fff':'var(--text)'}" onclick="setApptView('month')">شهري</button>
+      </div>
+      <button class="btn btn-primary" onclick="openApptModal()">+ موعد</button>
     </div>
-    <div class="form-row">
-      <div class="form-group"><label>التاريخ *</label><input id="apt-d" type="date" value="${todayStr()}"></div>
-      <div class="form-group"><label>الوقت</label><input id="apt-t" type="time"></div>
-    </div>
-    <div class="form-row">
-      <div class="form-group"><label>الخدمة</label><select id="apt-s">${svcs.map(s=>`<option>${s}</option>`).join('')}</select></div>
-      <div class="form-group"><label>الطبيب</label><input id="apt-dr"></div>
-    </div>
-    <div class="form-group"><label>ملاحظات</label><textarea id="apt-n" rows="2"></textarea></div>
-    <div class="form-actions">
-      <button class="btn btn-outline" onclick="closeModal()">إلغاء</button>
-      <button class="btn btn-primary" onclick="saveAppt('${fixId}')">حفظ</button>
+  </div>`;
+}
+
+// ── لوحات الاستقبال: تذكير الغد + إشعارات تعديلات الأطباء ──
+async function apptPanels(){
+  const tmrw=tomorrowStr();
+  const[{data:tA},{data:ev},{data:pend}]=await Promise.all([
+    sb.from('appointments').select('*').eq('date',tmrw).neq('status','ملغي').order('start_time').range(0,9999),
+    sb.from('appointment_events').select('*').eq('seen_by_reception',false).order('created_at',{ascending:false}).limit(30),
+    sb.from('pending_patients').select('id').eq('status','متابعة').limit(999),
+  ]);
+  const phones=await fetchApptPhones(tA);
+  const hour=new Date().getHours();
+  const open=hour>=14;
+  let out='';
+  if((ev||[]).length){
+    out+=`<div class="alert a-warn" style="display:block;margin-bottom:12px">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap">
+        <strong>🔔 تعديلات من الأطباء — ${ev.length}</strong>
+        <button class="btn btn-outline btn-sm" onclick="markEventsSeen()">تم الاطلاع على الكل</button>
+      </div>
+      <div style="margin-top:7px;display:flex;flex-direction:column;gap:5px">
+        ${ev.map(e=>`<div style="display:flex;gap:8px;flex-wrap:wrap;font-size:11.5px;border-bottom:1px dashed #fcd34d;padding-bottom:4px">
+          <span class="badge bo">${esc(e.action)}</span>
+          <strong>${esc(e.patient_name||'—')}</strong>
+          <span style="color:var(--muted)">${esc(e.doctor_name||'—')}</span>
+          <span dir="ltr" style="color:var(--muted)">${e.appointment_date||''} ${hhmm(e.start_time)}</span>
+          <span>${esc(e.details||'')}</span>
+          <span style="color:var(--muted)">— ${esc(e.actor_name||'')}</span>
+          ${e.appointment_id?`<button class="btn btn-outline btn-sm" onclick="openApptById('${e.appointment_id}')">فتح</button>`:''}
+        </div>`).join('')}
+      </div></div>`;
+  }
+  if((pend||[]).length){
+    out+=`<div class="alert a-info" style="margin-bottom:12px">
+      <div><strong>📋 مرضى بلا موعد — ${pend.length}</strong> بحاجة متابعة
+      <button class="btn btn-outline btn-sm" style="margin-right:8px" onclick="nav('pending')">فتح القائمة</button></div></div>`;
+  }
+  const rows=(tA||[]).map(a=>{
+    const ph=a.patient_phone||phones[a.patient_id]||'';
+    const wa=ph?`<a class="badge bg" style="text-decoration:none" target="_blank" href="${waLink(ph,'تذكير: موعدكم غداً '+tmrw+' الساعة '+hhmm(a.start_time)+' في عيادات ڤيرونا 🦷')}">💬 واتساب</a>`:'<span class="badge bgr">لا رقم</span>';
+    return `<tr>
+      <td style="font-weight:700">${esc(a.patient_name||'—')}</td>
+      <td dir="ltr">${hhmm(a.start_time)||'—'}</td>
+      <td><span class="badge" style="background:${drClr(a.doctor_id)}22;color:${drClr(a.doctor_id)}">${esc(drNm(a.doctor_id))}</span></td>
+      <td dir="ltr">${esc(ph||'—')}</td>
+      <td><span class="badge ${a.contact_status==='مؤكد'?'bg':a.contact_status==='لم يرد'?'br':a.contact_status==='تم التواصل'?'bt':'bgr'}">${esc(a.contact_status||'لم يتم التواصل')}</span></td>
+      <td style="white-space:nowrap">
+        ${wa}
+        <button class="btn btn-success btn-sm" onclick="setContact('${a.id}','مؤكد')">مؤكد</button>
+        <button class="btn btn-outline btn-sm" onclick="setContact('${a.id}','لم يرد')">لم يرد</button>
+        <button class="btn btn-outline btn-sm" onclick="setContact('${a.id}','لم يقرر موعده بعد')">لم يقرر موعده</button>
+        <button class="btn btn-outline btn-sm" onclick="openApptById('${a.id}')">تفاصيل</button>
+      </td></tr>`;
+  }).join('');
+  out+=`<div class="tbl-wrap" style="margin-bottom:14px">
+    <div class="tbl-hdr"><h3>📅 مواعيد الغد (${tmrw}) — ${(tA||[]).length} موعد ${open?'':'· التذكير يبدأ 2:00 مساءً'}</h3>
+      <div class="rt-label"><span class="rt-dot"></span>حي</div></div>
+    <table><thead><tr><th>المريض</th><th>الوقت</th><th>الطبيب</th><th>الهاتف</th><th>التواصل</th><th>إجراء</th></tr></thead>
+    <tbody>${rows||nr(6,'لا مواعيد غداً')}</tbody></table></div>`;
+  return out;
+}
+
+async function markEventsSeen(){
+  await sb.from('appointment_events').update({seen_by_reception:true,seen_at:new Date().toISOString(),seen_by:apptActor()}).eq('seen_by_reception',false);
+  renderAppts();
+}
+
+async function setContact(id,val){
+  const patch={contact_status:val,contacted_at:new Date().toISOString(),contacted_by:apptActor(),updated_by:apptActor(),updated_by_role:ROLE};
+  if(val==='مؤكد')patch.status='مؤكد';
+  if(val==='تم التواصل')patch.status='تم التواصل';
+  await sb.from('appointments').update(patch).eq('id',id);
+  renderAppts();
+}
+
+// ── العرض اليومي: عمود لكل طبيب ────────────────────────
+async function apptDayView(){
+  const drs=visibleDoctors();
+  let q=sb.from('appointments').select('*').eq('date',APPT_DATE).order('start_time').range(0,9999);
+  if(ROLE==='doctor')q=q.eq('doctor_id',MY_DR.id);
+  const{data:all}=await q;
+  const appts=(all||[]).filter(a=>ROLE==='doctor'||APPT_DR==='all'||a.doctor_id===APPT_DR);
+  const unassigned=appts.filter(a=>!a.doctor_id);
+  const slots=[];for(let m=DAY_START*60;m<DAY_END*60;m+=SLOT_MIN)slots.push(m);
+  const H=slots.length*SLOT_PX;
+
+  const timeCol=`<div class="ap-timecol">${slots.map(m=>`<div class="ap-timecell" style="height:${SLOT_PX}px">${m%60===0?minT(m):''}</div>`).join('')}</div>`;
+
+  const cols=drs.map(d=>{
+    const mine=appts.filter(a=>a.doctor_id===d.id);
+    const blocks=mine.map(a=>{
+      const s=toMin(a.start_time),e=toMin(a.end_time)||(s!==null?s+SLOT_MIN:null);
+      if(s===null)return '';
+      const ov=mine.filter(b=>{const bs=toMin(b.start_time),be=toMin(b.end_time)||(bs+SLOT_MIN);return bs!==null&&bs<e&&be>s;});
+      const idx=ov.findIndex(b=>b.id===a.id),n=Math.max(ov.length,1);
+      const top=(s-DAY_START*60)/SLOT_MIN*SLOT_PX;
+      const h=Math.max((e-s)/SLOT_MIN*SLOT_PX-3,26);
+      const dim=(a.status==='ملغي'||a.status==='لم يحضر')?'opacity:.55;text-decoration:line-through':'';
+      return `<div class="ap-block" style="top:${top}px;height:${h}px;right:${idx*(100/n)}%;width:${100/n}%;border-right:4px solid ${drClr(d.id)};${dim}" onclick="openApptById('${a.id}')">
+        <div class="ap-b-t">${hhmm(a.start_time)}${a.end_time?'-'+hhmm(a.end_time):''}</div>
+        <div class="ap-b-n">${esc(a.patient_name||'—')}${a.is_unregistered?' <span class="badge bo">غير مسجّل</span>':''}</div>
+        <div class="ap-b-s"><span class="badge ${stCls(a.status)}">${esc(a.status||'')}</span> <span style="color:var(--muted)">${esc(a.service||'')}</span></div>
+      </div>`;
+    }).join('');
+    const cells=slots.map(m=>`<div class="ap-slot" style="height:${SLOT_PX}px" onclick="openApptModal({doctor_id:'${d.id}',date:'${APPT_DATE}',start:'${minT(m)}'})"></div>`).join('');
+    return `<div class="ap-col">
+      <div class="ap-colhdr" style="border-top:3px solid ${drClr(d.id)}">${esc(d.name)} <span class="badge bgr">${mine.length}</span></div>
+      <div class="ap-colbody" style="height:${H}px">${cells}${blocks}</div>
+    </div>`;
+  }).join('');
+
+  const unass=unassigned.length?`<div class="alert a-warn" style="margin-top:12px;display:block">
+    <strong>مواعيد قديمة بلا طبيب — ${unassigned.length}</strong>
+    <div style="margin-top:6px;display:flex;flex-direction:column;gap:4px">
+      ${unassigned.map(a=>`<div style="font-size:11.5px"><strong>${esc(a.patient_name||'—')}</strong> ${esc(a.time||'')} ${esc(a.service||'')}
+        <button class="btn btn-outline btn-sm" onclick="openApptById('${a.id}')">تعيين طبيب</button></div>`).join('')}
+    </div></div>`:'';
+
+  const dayName=new Date(APPT_DATE+'T12:00:00').toLocaleDateString('ar-IQ',{weekday:'long'});
+  return `<div class="tbl-wrap" style="padding:0">
+    <div class="tbl-hdr"><h3>${dayName} · ${APPT_DATE} — ${appts.length} موعد</h3>
+      <span style="font-size:11px;color:var(--muted)">اضغط على أي خانة فارغة لحجز موعد</span></div>
+    <div class="ap-grid">${timeCol}<div class="ap-cols">${cols||'<div style="padding:26px;text-align:center;color:var(--muted);font-size:12px">لا يوجد أطباء</div>'}</div></div>
+  </div>${unass}`;
+}
+
+// ── العرض الشهري: كل العيادة ──────────────────────────
+async function apptMonthView(){
+  const start=APPT_MONTH+'-01';
+  const endD=new Date(APPT_MONTH+'-01T12:00:00');endD.setMonth(endD.getMonth()+1);endD.setDate(0);
+  const end=endD.toISOString().slice(0,10);
+  let q=sb.from('appointments').select('*').gte('date',start).lte('date',end).range(0,9999);
+  if(ROLE==='doctor')q=q.eq('doctor_id',MY_DR.id);
+  const{data:all}=await q;
+  const appts=(all||[]).filter(a=>ROLE==='doctor'||APPT_DR==='all'||a.doctor_id===APPT_DR);
+  const byDay={};
+  appts.forEach(a=>{if(a.status==='ملغي')return;(byDay[a.date]=byDay[a.date]||[]).push(a);});
+  const first=new Date(start+'T12:00:00');
+  const lead=first.getDay();
+  const days=endD.getDate();
+  const names=['الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'];
+  let cells='';
+  for(let i=0;i<lead;i++)cells+='<div class="ap-mcell ap-mdim"></div>';
+  for(let d=1;d<=days;d++){
+    const ds=APPT_MONTH+'-'+String(d).padStart(2,'0');
+    const list=byDay[ds]||[];
+    const byDr={};list.forEach(a=>{byDr[a.doctor_id||'none']=(byDr[a.doctor_id||'none']||0)+1;});
+    const bars=Object.entries(byDr).map(([id,c])=>`<div style="display:flex;align-items:center;gap:4px;font-size:10px"><span style="width:8px;height:8px;border-radius:50%;background:${drClr(id)};flex-shrink:0"></span><span style="color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(drNm(id))}</span><strong>${c}</strong></div>`).join('');
+    cells+=`<div class="ap-mcell ${ds===todayStr()?'ap-mtoday':''}" onclick="jumpToDay('${ds}')">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <strong style="font-size:12px">${d}</strong>
+        ${list.length?`<span class="badge bt">${list.length}</span>`:''}
+      </div>
+      <div style="margin-top:4px;display:flex;flex-direction:column;gap:2px">${bars}</div>
+    </div>`;
+  }
+  return `<div class="tbl-wrap" style="padding:0">
+    <div class="tbl-hdr"><h3>${APPT_MONTH} — ${appts.length} موعد</h3><span style="font-size:11px;color:var(--muted)">اضغط على أي يوم لفتح جدوله</span></div>
+    <div class="ap-mhdr">${names.map(n=>`<div>${n}</div>`).join('')}</div>
+    <div class="ap-month">${cells}</div>
+  </div>`;
+}
+
+// ── نافذة الموعد ───────────────────────────────────────
+async function openApptById(id){
+  const{data:a}=await sb.from('appointments').select('*').eq('id',id).maybeSingle();
+  if(!a){alert('الموعد غير موجود');return;}
+  if(ROLE==='doctor'&&a.doctor_id!==MY_DR?.id){alert('هذا الموعد لطبيب آخر');return;}
+  let phone=a.patient_phone||'';
+  if(!phone&&a.patient_id&&ROLE!=='doctor'){const{data:p}=await sb.from('patients').select('phone,phone2').eq('id',a.patient_id).maybeSingle();phone=p?.phone||p?.phone2||'';}
+  const showPhone=ROLE!=='doctor';
+  const row=(l,val)=>`<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px dashed var(--border);font-size:12.5px"><span style="color:var(--muted)">${l}</span><strong>${val}</strong></div>`;
+  modal('تفاصيل الموعد',`
+    ${row('المريض',esc(a.patient_name||'—')+(a.is_unregistered?' <span class="badge bo">غير مسجّل</span>':''))}
+    ${row('الطبيب','<span style="color:'+drClr(a.doctor_id)+'">'+esc(drNm(a.doctor_id))+'</span>')}
+    ${row('التاريخ','<span dir="ltr">'+(a.date||'—')+'</span>')}
+    ${row('الوقت','<span dir="ltr">'+(hhmm(a.start_time)||'—')+(a.end_time?' - '+hhmm(a.end_time):'')+'</span>')}
+    ${row('الخدمة',esc(a.service||'—'))}
+    ${row('الحالة','<span class="badge '+stCls(a.status)+'">'+esc(a.status||'')+'</span>')}
+    ${row('التواصل',esc(a.contact_status||'لم يتم التواصل'))}
+    ${showPhone?row('الهاتف','<span dir="ltr">'+esc(phone||'—')+'</span>'):''}
+    ${a.notes?row('ملاحظات',esc(a.notes)):''}
+    ${a.cancel_reason?row('سبب الإلغاء',esc(a.cancel_reason)):''}
+    <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:14px">
+      ${showPhone&&phone?`<a class="btn btn-success btn-sm" target="_blank" href="${waLink(phone,'عيادات ڤيرونا 🦷 بخصوص موعدكم بتاريخ '+a.date)}">💬 واتساب</a>`:''}
+      <button class="btn btn-outline btn-sm" onclick="quickStatus('${a.id}','حضر')">حضر</button>
+      <button class="btn btn-outline btn-sm" onclick="quickStatus('${a.id}','لم يحضر')">لم يحضر</button>
+      <button class="btn btn-outline btn-sm" onclick="quickStatus('${a.id}','تم التأجيل')">تأجيل</button>
+      <button class="btn btn-danger btn-sm" onclick="cancelAppt('${a.id}')">إلغاء الموعد</button>
+      <button class="btn btn-primary btn-sm" onclick="closeModal();openApptModal(${JSON.stringify({id:a.id}).replace(/"/g,'&quot;')})">تعديل</button>
+      ${a.is_unregistered?`<button class="btn btn-outline btn-sm" onclick="convertToPatient('${a.id}')">تحويل إلى مريض مسجّل</button>`:''}
+      ${ROLE==='admin'?`<button class="btn btn-danger btn-sm" onclick="deleteAppt('${a.id}')">🗑 حذف</button>`:''}
     </div>`);
 }
-async function saveAppt(fixId=''){
-  const pv=v('apt-p');if(!pv){alert('اختر مريضاً');return;}
-  const[pid,pname]=pv.split('|');
-  await sb.from('appointments').insert({patient_id:pid,patient_name:pname,date:v('apt-d'),time:v('apt-t'),service:v('apt-s'),doctor_name:v('apt-dr').trim(),notes:v('apt-n').trim(),status:'مؤكد'});
-  closeModal();if(fixId)openPatient(fixId);else renderAppts();
+
+async function quickStatus(id,st){
+  await sb.from('appointments').update({status:st,updated_by:apptActor(),updated_by_role:ROLE}).eq('id',id);
+  closeModal();renderPage(CUR);
 }
-async function updAppt(id,status){await sb.from('appointments').update({status}).eq('id',id);}
+async function cancelAppt(id){
+  const reason=prompt('سبب الإلغاء (إجباري):','');
+  if(!reason||!reason.trim()){alert('سبب الإلغاء مطلوب');return;}
+  const{error}=await sb.from('appointments').update({status:'ملغي',cancel_reason:reason.trim(),updated_by:apptActor(),updated_by_role:ROLE}).eq('id',id);
+  if(error){alert('خطأ: '+error.message);return;}
+  closeModal();renderPage(CUR);
+}
+async function deleteAppt(id){
+  if(!confirm('حذف الموعد نهائياً؟'))return;
+  await sb.from('appointments').delete().eq('id',id);
+  closeModal();renderPage(CUR);
+}
+
+async function openApptModal(opt={}){
+  if(!DOCTORS.length)await loadDoctors();
+  let a={};
+  if(opt.id){const{data}=await sb.from('appointments').select('*').eq('id',opt.id).maybeSingle();a=data||{};}
+  const isEdit=!!a.id;
+  const fixedPt=opt.patient_id?{id:opt.patient_id,name:opt.patient_name||''}:null;
+  if(fixedPt)window.APPT_RETURN_PT=fixedPt.id;
+  const dId=a.doctor_id||opt.doctor_id||(ROLE==='doctor'?MY_DR?.id:'')||'';
+  const date=a.date||opt.date||todayStr();
+  const st=hhmm(a.start_time)||opt.start||'';
+  const en=hhmm(a.end_time)||(opt.start?minT(toMin(opt.start)+SLOT_MIN):'');
+  const unreg=isEdit?!!a.is_unregistered:false;
+  const drOpts=DOCTORS.map(d=>`<option value="${d.id}" ${dId===d.id?'selected':''}>${esc(d.name)}</option>`).join('');
+  const svcOpts=SERVICES.map(s=>`<option ${a.service===s?'selected':''}>${esc(s)}</option>`).join('');
+  const stOpts=APPT_STATUS.map(s=>`<option ${(a.status||'مؤكد')===s?'selected':''}>${s}</option>`).join('');
+  modal(isEdit?'تعديل موعد':'موعد جديد',`
+    <input type="hidden" id="apt-id" value="${a.id||''}">
+    <input type="hidden" id="apt-pid" value="${a.patient_id||fixedPt?.id||''}">
+    <div class="form-group">
+      <label>المريض *</label>
+      ${fixedPt?`<input value="${esc(fixedPt.name)}" readonly style="background:#f8fafc;color:var(--muted)"><input type="hidden" id="apt-pname" value="${esc(fixedPt.name)}">`:`
+      <div style="display:flex;gap:7px;margin-bottom:6px">
+        <label style="display:flex;align-items:center;gap:5px;font-size:11.5px;font-weight:700"><input type="radio" name="apt-mode" value="reg" ${unreg?'':'checked'} style="width:auto" onchange="toggleApptMode('reg')"> مريض مسجّل</label>
+        <label style="display:flex;align-items:center;gap:5px;font-size:11.5px;font-weight:700"><input type="radio" name="apt-mode" value="new" ${unreg?'checked':''} style="width:auto" onchange="toggleApptMode('new')"> اسم ورقم فقط</label>
+      </div>
+      <div id="apt-reg-box" style="display:${unreg?'none':'block'}">
+        <input id="apt-search" placeholder="ابحث بالاسم أو الرقم V-XXXX" oninput="searchApptPt(this.value)" value="${esc(a.patient_name||'')}">
+        <select id="apt-plist" size="4" style="margin-top:5px;display:none" onchange="pickApptPt()"></select>
+        <div id="apt-picked" style="margin-top:5px;font-size:11.5px;color:var(--teal);font-weight:700">${a.patient_id?'✓ '+esc(a.patient_name||''):''}</div>
+      </div>
+      <div id="apt-new-box" style="display:${unreg?'block':'none'}">
+        <div class="form-row">
+          <div class="form-group"><label>الاسم</label><input id="apt-nname" value="${unreg?esc(a.patient_name||''):''}"></div>
+          <div class="form-group"><label>الهاتف</label><input id="apt-nphone" dir="ltr" value="${esc(a.patient_phone||'')}"></div>
+        </div>
+      </div>`}
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>الطبيب *</label>
+        ${ROLE==='doctor'?`<input value="${esc(MY_DR?.name||'')}" readonly style="background:#f8fafc;color:var(--muted)"><input type="hidden" id="apt-dr" value="${MY_DR?.id||''}">`
+          :`<select id="apt-dr"><option value="">اختر</option>${drOpts}</select>`}
+      </div>
+      <div class="form-group"><label>التاريخ *</label><input id="apt-d" type="date" value="${date}"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>من *</label><input id="apt-st" type="time" value="${st}" onchange="autoEnd()"></div>
+      <div class="form-group"><label>إلى</label><input id="apt-en" type="time" value="${en}"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>الخدمة</label><select id="apt-s"><option value="">—</option>${svcOpts}</select></div>
+      <div class="form-group"><label>الحالة</label><select id="apt-status" onchange="toggleCancelBox()">${stOpts}</select></div>
+    </div>
+    <div class="form-group" id="apt-cancel-box" style="display:${a.status==='ملغي'?'block':'none'}"><label>سبب الإلغاء * (إجباري)</label><input id="apt-cr" value="${esc(a.cancel_reason||'')}"></div>
+    <div class="form-group"><label>ملاحظات</label><textarea id="apt-n" rows="2">${esc(a.notes||'')}</textarea></div>
+    <div id="apt-warn"></div>
+    <div class="form-actions">
+      <button class="btn btn-outline" onclick="closeModal()">إلغاء</button>
+      <button class="btn btn-primary" onclick="saveAppt()">حفظ</button>
+    </div>`);
+}
+
+function toggleApptMode(m){
+  document.getElementById('apt-reg-box').style.display=m==='reg'?'block':'none';
+  document.getElementById('apt-new-box').style.display=m==='new'?'block':'none';
+}
+function toggleCancelBox(){
+  document.getElementById('apt-cancel-box').style.display=v('apt-status')==='ملغي'?'block':'none';
+}
+function autoEnd(){
+  const s=v('apt-st');if(!s)return;
+  const el=document.getElementById('apt-en');
+  if(el&&!el.value)el.value=minT(toMin(s)+SLOT_MIN);
+}
+let APT_SRCH=null;
+function searchApptPt(term){
+  clearTimeout(APT_SRCH);
+  APT_SRCH=setTimeout(async()=>{
+    const t=(term||'').trim();
+    const sel=document.getElementById('apt-plist');if(!sel)return;
+    if(t.length<2){sel.style.display='none';return;}
+    const{data}=await sb.from('patients').select('id,name,patient_number').or('name.ilike.%'+t+'%,patient_number.ilike.%'+t+'%').limit(25);
+    sel.innerHTML=(data||[]).map(p=>`<option value="${p.id}|${esc(p.name)}">${esc(p.name)} — ${esc(p.patient_number||'')}</option>`).join('');
+    sel.style.display=(data||[]).length?'block':'none';
+  },350);
+}
+function pickApptPt(){
+  const sel=document.getElementById('apt-plist');
+  const[id,name]=(sel.value||'').split('|');
+  document.getElementById('apt-pid').value=id||'';
+  document.getElementById('apt-picked').innerHTML=id?'✓ '+name:'';
+  document.getElementById('apt-search').value=name||'';
+  sel.style.display='none';
+}
+
+async function saveAppt(){
+  const id=v('apt-id'),drId=v('apt-dr'),date=v('apt-d'),st=v('apt-st'),en=v('apt-en')||minT(toMin(v('apt-st')||'00:00')+SLOT_MIN);
+  const mode=document.querySelector('input[name="apt-mode"]:checked')?.value||(v('apt-pid')?'reg':'new');
+  let pid=v('apt-pid')||null,pname='',phone='',unreg=false;
+  const fixedName=document.getElementById('apt-pname')?.value;
+  if(fixedName){pname=fixedName;}
+  else if(mode==='new'){unreg=true;pid=null;pname=v('apt-nname').trim();phone=v('apt-nphone').trim();
+    if(!pname||!phone){alert('اكتب الاسم والهاتف');return;}}
+  else{pname=v('apt-search').trim();if(!pid){alert('اختر مريضاً من نتائج البحث');return;}}
+  if(!drId){alert('اختر الطبيب');return;}
+  if(!date||!st){alert('حدد التاريخ ووقت البداية');return;}
+  if(toMin(en)<=toMin(st)){alert('وقت النهاية يجب أن يكون بعد البداية');return;}
+  const status=v('apt-status')||'مؤكد',cr=v('apt-cr').trim();
+  if(status==='ملغي'&&!cr){alert('سبب الإلغاء إجباري');return;}
+
+  const{data:same}=await sb.from('appointments').select('id,doctor_id,start_time,end_time,patient_name').eq('date',date).neq('status','ملغي').range(0,9999);
+  const s=toMin(st),e=toMin(en);
+  const clash=(same||[]).filter(x=>x.id!==id&&x.doctor_id===drId&&toMin(x.start_time)!==null&&toMin(x.start_time)<e&&(toMin(x.end_time)||toMin(x.start_time)+SLOT_MIN)>s);
+  if(clash.length&&!confirm('تعارض: نفس الطبيب لديه '+clash.length+' موعد في هذا الوقت ('+clash.map(c=>c.patient_name||'—').join('، ')+').\nالمتابعة على أي حال؟'))return;
+  const overlapAll=(same||[]).filter(x=>x.id!==id&&toMin(x.start_time)!==null&&toMin(x.start_time)<e&&(toMin(x.end_time)||toMin(x.start_time)+SLOT_MIN)>s).length;
+  if(overlapAll>=5&&!confirm('تحذير: '+(overlapAll+1)+' مرضى في نفس الوقت والعيادة فيها 5 كراسي فقط.\nالمتابعة؟'))return;
+
+  const rec={patient_id:pid,patient_name:pname,patient_phone:phone||null,is_unregistered:unreg,
+    doctor_id:drId,doctor_name:drNm(drId),date,start_time:st,end_time:en,
+    service:v('apt-s')||null,status,cancel_reason:status==='ملغي'?cr:null,notes:v('apt-n').trim()||null,
+    updated_by:apptActor(),updated_by_role:ROLE};
+  let error;
+  if(id){({error}=await sb.from('appointments').update(rec).eq('id',id));}
+  else{rec.created_by=apptActor();rec.created_by_role=ROLE;({error}=await sb.from('appointments').insert(rec));}
+  if(error){alert('خطأ: '+error.message);return;}
+  closeModal();
+  if(window.APPT_RETURN_PT&&typeof openPatient==='function'){const rp=window.APPT_RETURN_PT;window.APPT_RETURN_PT=null;openPatient(rp);}
+  else renderPage(CUR);
+}
+
+async function convertToPatient(apptId){
+  const{data:a}=await sb.from('appointments').select('*').eq('id',apptId).maybeSingle();
+  if(!a)return;
+  window.CONVERT_APPT=apptId;
+  closeModal();
+  modalAddPatient();
+  setTimeout(()=>{
+    const n=document.getElementById('pn');if(n)n.value=a.patient_name||'';
+    const p=document.getElementById('pp');if(p)p.value=a.patient_phone||'';
+  },60);
+}
+
+// ── مرضى بلا موعد ──────────────────────────────────────
+async function renderPending(){
+  const{data:rows}=await sb.from('pending_patients').select('*').neq('status','تم الحل').order('created_at',{ascending:false}).range(0,9999);
+  const{data:done}=await sb.from('pending_patients').select('id').eq('status','تم الحل').limit(999);
+  const body=(rows||[]).map(r=>{
+    const ph=r.patient_phone||'';
+    return `<tr>
+      <td style="font-weight:700">${esc(r.patient_name||'—')}${r.patient_code?` <span class="pt-num">${esc(r.patient_code)}</span>`:''}</td>
+      <td><span class="badge ${r.reason==='لم يحضر'?'br':r.reason==='ألغى الموعد'?'bo':'by'}">${esc(r.reason||'—')}</span>${r.reason_detail?`<div style="font-size:10.5px;color:var(--muted)">${esc(r.reason_detail)}</div>`:''}</td>
+      <td>${esc(r.doctor_name||'—')}</td>
+      <td dir="ltr">${ROLE==='doctor'?'••••••':esc(ph||'—')}</td>
+      <td><span class="badge ${r.status==='متابعة'?'bb':'bgr'}">${esc(r.status)}</span>${r.last_contact_at?`<div style="font-size:10px;color:var(--muted)">${fmtD(r.last_contact_at)}</div>`:''}</td>
+      <td style="white-space:nowrap">
+        ${ph?`<a class="btn btn-success btn-sm" target="_blank" href="${waLink(ph,'عيادات ڤيرونا 🦷 — نود تحديد موعد جديد لكم')}">💬</a>`:''}
+        <button class="btn btn-primary btn-sm" onclick="bookFromPending('${r.id}')">حجز موعد</button>
+        ${r.status==='متابعة'?`<button class="btn btn-outline btn-sm" onclick="pendingStatus('${r.id}','مؤجل إلى إشعار آخر')">تأجيل لإشعار آخر</button>`:`<button class="btn btn-outline btn-sm" onclick="pendingStatus('${r.id}','متابعة')">إعادة للمتابعة</button>`}
+        <button class="btn btn-outline btn-sm" onclick="pendingNote('${r.id}')">ملاحظة</button>
+        <button class="btn btn-outline btn-sm" onclick="pendingResolve('${r.id}')">تم الحل</button>
+      </td></tr>`;
+  }).join('');
+  document.getElementById('pg-content').innerHTML=`
+    <div class="alert a-info">تدخل هذه القائمة تلقائياً كل حالة: لم يحضر · ألغى الموعد · لم يتم الرد · لم يقرر موعده بعد. ويخرج المريض تلقائياً عند حجز موعد جديد له أو تسجيل حضوره.</div>
+    <div class="tbl-wrap">
+      <div class="tbl-hdr"><h3>قائمة المتابعة (${(rows||[]).length}) · تم حلّها: ${(done||[]).length}</h3><div class="rt-label"><span class="rt-dot"></span>حي</div></div>
+      <table><thead><tr><th>المريض</th><th>السبب</th><th>الطبيب</th><th>الهاتف</th><th>الحالة</th><th>إجراء</th></tr></thead>
+      <tbody>${body||nr(6,'لا أحد في قائمة المتابعة')}</tbody></table>
+    </div>`;
+}
+async function pendingStatus(id,st){
+  await sb.from('pending_patients').update({status:st,updated_at:new Date().toISOString(),last_contact_at:new Date().toISOString(),last_contact_by:apptActor()}).eq('id',id);
+  renderPending();
+}
+async function pendingResolve(id){
+  const why=prompt('سبب الإغلاق:','تم التواصل وحُدّد موعد')||'—';
+  await sb.from('pending_patients').update({status:'تم الحل',resolved_at:new Date().toISOString(),resolved_reason:why,updated_at:new Date().toISOString()}).eq('id',id);
+  renderPending();
+}
+async function pendingNote(id){
+  const n=prompt('ملاحظة المتابعة:','');
+  if(n===null)return;
+  await sb.from('pending_patients').update({notes:n,last_contact_at:new Date().toISOString(),last_contact_by:apptActor(),updated_at:new Date().toISOString()}).eq('id',id);
+  renderPending();
+}
+async function bookFromPending(id){
+  const{data:r}=await sb.from('pending_patients').select('*').eq('id',id).maybeSingle();
+  if(!r)return;
+  if(r.patient_id)openApptModal({patient_id:r.patient_id,patient_name:r.patient_name,doctor_id:r.doctor_id||''});
+  else openApptModal({doctor_id:r.doctor_id||''});
+}
 
 // ── Payments ──────────────────────────────────────────
 async function renderPayments(){
